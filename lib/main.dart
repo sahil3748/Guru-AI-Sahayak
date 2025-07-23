@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
     return Sizer(
       builder: (context, orientation, screenType) {
         return MaterialApp(
-          title: 'guruai',
+          title: 'Guru-Ai',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: ThemeMode.light,
