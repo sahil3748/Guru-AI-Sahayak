@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "282796537878",
+    "project_id": "guru-ai-sahayak",
+    "storage_bucket": "guru-ai-sahayak.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:282796537878:android:d4b39ed61b0c290fc91d37",
+        "android_client_info": {
+          "package_name": "com.example.guru_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAg8yfRXlmaz4Y0YcVfdARzqcdNlDtTOo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
