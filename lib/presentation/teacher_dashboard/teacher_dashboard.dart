@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:guru_ai/presentation/textbook_scanner/textbook_scanner.dart';
+import 'package:guru_ai/presentation/visual_aids_screen/visual_aids_screen.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import './widgets/class_card_widget.dart';
 import './widgets/empty_state_widget.dart';
-import './widgets/greeting_card_widget.dart';
-import './widgets/network_status_widget.dart';
-import './widgets/quick_access_toolbar_widget.dart';
 
 class TeacherDashboard extends StatefulWidget {
   const TeacherDashboard({super.key});
@@ -17,14 +16,9 @@ class TeacherDashboard extends StatefulWidget {
 
 class _TeacherDashboardState extends State<TeacherDashboard>
     with TickerProviderStateMixin {
-  int _currentIndex = 0;
-  bool _isOnline = true;
-  bool _isSyncing = false;
-  bool _isRefreshing = false;
-
-  // Mock data for teacher and classes
+  // Mock data for teacher and classes`
   final Map<String, dynamic> teacherData = {
-    "name": "Priya Sharma",
+    "name": "Teacher",
     "school": "Delhi Public School, Sector 45",
     "avatar":
         "https://cdn.pixabay.com/photo/2015/03/04/22/35/avatar-659652_640.png",
@@ -79,9 +73,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundOffWhite,
-      appBar: _buildAppBar(),
+      appBar: GreetingHeaderWidget(
+        teacherName: teacherData["name"] as String,
+        onLanguageSwitch: _handleLanguageSwitch,
+      ),
       body: _buildBody(),
-      bottomNavigationBar: _buildBottomNavigationBar(),
       floatingActionButton: _buildFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -130,10 +126,6 @@ class _TeacherDashboardState extends State<TeacherDashboard>
         ],
       ),
       actions: [
-        NetworkStatusWidget(
-          isOnline: _isOnline,
-          isSyncing: _isSyncing,
-        ),
         SizedBox(width: 2.w),
         IconButton(
           onPressed: () => _showNotifications(),
@@ -164,6 +156,82 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     );
   }
 
+  void _handleLanguageSwitch() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Language Selection'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('English'),
+              leading: Radio(
+                value: 'en',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
+            ),
+            ListTile(
+              title: Text('Spanish'),
+              leading: Radio(
+                value: 'es',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
+            ),
+            ListTile(
+              title: Text('French'),
+              leading: Radio(
+                value: 'fr',
+                groupValue: 'en',
+                onChanged: (value) {},
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleQuickAction(String action) {
+    switch (action) {
+      case 'scan':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TextbookScannerScreen(),
+          ),
+        );
+        break;
+      case 'worksheet':
+        _navigateToAITools();
+        break;
+      case 'visual':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const VisualAidsCreatorScreen(),
+          ),
+        );
+        break;
+
+      case 'chat':
+        Navigator.pushNamed(context, '/ai-chat-assistant-screen');
+        break;
+    }
+  }
+
   Widget _buildBody() {
     return RefreshIndicator(
       onRefresh: _handleRefresh,
@@ -173,24 +241,8 @@ class _TeacherDashboardState extends State<TeacherDashboard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Greeting Card
-            GreetingCardWidget(
-              teacherName: teacherData["name"] as String,
-              schoolName: teacherData["school"] as String,
-              todayClassesCount: teacherData["todayClasses"] as int,
-              pendingTasksCount: teacherData["pendingTasks"] as int,
-            ),
-
-            // Quick Access Toolbar
-            QuickAccessToolbarWidget(
-              onAITools: () => _navigateToAITools(),
-              onReadingAssessment: () => _navigateToReadingAssessment(),
-              onLessonPlanner: () => _navigateToLessonPlanner(),
-            ),
-
             SizedBox(height: 2.h),
-
-            // Classes Section Header
+            QuickActionsWidget(onActionTap: _handleQuickAction),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 4.w),
               child: Row(
@@ -231,87 +283,23 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                   )
                 : Column(
                     children: (classesData)
-                        .map((classData) => ClassCardWidget(
-                              classData: classData,
-                              onTap: () => _navigateToClassDetail(classData),
-                              onPostAnnouncement: () =>
-                                  _postAnnouncement(classData),
-                              onViewStudents: () => _viewStudents(classData),
-                              onClassSettings: () =>
-                                  _openClassSettings(classData),
-                            ))
+                        .map(
+                          (classData) => ClassCardWidget(
+                            classData: classData,
+                            onTap: () => _navigateToClassDetail(classData),
+                            onPostAnnouncement: () =>
+                                _postAnnouncement(classData),
+                            onViewStudents: () => _viewStudents(classData),
+                            onClassSettings: () =>
+                                _openClassSettings(classData),
+                          ),
+                        )
                         .toList(),
                   ),
 
             SizedBox(height: 10.h), // Space for FAB
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceWhite,
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppTheme.surfaceWhite,
-        selectedItemColor: AppTheme.primaryBlue,
-        unselectedItemColor: AppTheme.onSurfaceSecondary,
-        elevation: 0,
-        items: [
-          BottomNavigationBarItem(
-            icon: CustomIconWidget(
-              iconName: 'dashboard',
-              color: _currentIndex == 0
-                  ? AppTheme.primaryBlue
-                  : AppTheme.onSurfaceSecondary,
-              size: 6.w,
-            ),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: CustomIconWidget(
-              iconName: 'school',
-              color: _currentIndex == 1
-                  ? AppTheme.primaryBlue
-                  : AppTheme.onSurfaceSecondary,
-              size: 6.w,
-            ),
-            label: 'Classes',
-          ),
-          BottomNavigationBarItem(
-            icon: CustomIconWidget(
-              iconName: 'auto_awesome',
-              color: _currentIndex == 2
-                  ? AppTheme.primaryBlue
-                  : AppTheme.onSurfaceSecondary,
-              size: 6.w,
-            ),
-            label: 'Tools',
-          ),
-          BottomNavigationBarItem(
-            icon: CustomIconWidget(
-              iconName: 'person',
-              color: _currentIndex == 3
-                  ? AppTheme.primaryBlue
-                  : AppTheme.onSurfaceSecondary,
-              size: 6.w,
-            ),
-            label: 'Profile',
-          ),
-        ],
       ),
     );
   }
@@ -330,17 +318,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     );
   }
 
-  Future<void> _handleRefresh() async {
-    setState(() => _isSyncing = true);
-
-    // Simulate network sync
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _isSyncing = false;
-      _isOnline = true;
-    });
-  }
+  Future<void> _handleRefresh() async {}
 
   void _showCreateActionBottomSheet() {
     showModalBottomSheet(
@@ -429,11 +407,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: CustomIconWidget(
-          iconName: icon,
-          color: color,
-          size: 6.w,
-        ),
+        child: CustomIconWidget(iconName: icon, color: color, size: 6.w),
       ),
       title: Text(
         title,
@@ -441,14 +415,9 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           fontWeight: FontWeight.w600,
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: AppTheme.lightTheme.textTheme.bodySmall,
-      ),
+      subtitle: Text(subtitle, style: AppTheme.lightTheme.textTheme.bodySmall),
       onTap: onTap,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -539,5 +508,321 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
   void _scanTextbook() {
     // Navigate to textbook scanner
+  }
+}
+
+class GreetingHeaderWidget extends StatelessWidget
+    implements PreferredSizeWidget {
+  final String teacherName;
+  final VoidCallback onLanguageSwitch;
+
+  const GreetingHeaderWidget({
+    Key? key,
+    required this.teacherName,
+    required this.onLanguageSwitch,
+  }) : super(key: key);
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 45);
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final timeOfDay = now.hour < 12
+        ? 'Good Morning'
+        : now.hour < 17
+        ? 'Good Afternoon'
+        : 'Good Evening';
+    final formattedDate = '${_getMonthName(now.month)} ${now.day}, ${now.year}';
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(left: 4.w, right: 4.w, top: 4.h),
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.lightTheme.colorScheme.shadow,
+            offset: Offset(0, 2),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$timeOfDay,',
+                  style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(height: 0.5.h),
+                Text(
+                  teacherName,
+                  style: AppTheme.lightTheme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 0.5.h),
+                Text(
+                  formattedDate,
+                  style: AppTheme.lightTheme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: onLanguageSwitch,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+              decoration: BoxDecoration(
+                color: AppTheme.lightTheme.colorScheme.primaryContainer
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.lightTheme.colorScheme.outline.withValues(
+                    alpha: 0.3,
+                  ),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomIconWidget(
+                    iconName: 'language',
+                    color: AppTheme.lightTheme.colorScheme.primary,
+                    size: 18,
+                  ),
+                  SizedBox(width: 1.w),
+                  Text(
+                    'EN',
+                    style: AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
+                      color: AppTheme.lightTheme.colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return months[month - 1];
+  }
+}
+
+class QuickActionsWidget extends StatelessWidget {
+  final Function(String) onActionTap;
+
+  const QuickActionsWidget({Key? key, required this.onActionTap})
+    : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> quickActions = [
+      {
+        "title": "Scan Textbook",
+        "subtitle": "Camera capture",
+        "icon": "camera_alt",
+        "color": Color(0xFF4CAF50),
+        "usageCount": 12,
+        "timeSaved": "2.5 hrs",
+        "action": "scan",
+      },
+      {
+        "title": "Create Worksheet",
+        "subtitle": "AI generation",
+        "icon": "description",
+        "color": Color(0xFF1976D2),
+        "usageCount": 8,
+        "timeSaved": "3.2 hrs",
+        "action": "worksheet",
+      },
+      {
+        "title": "Visual Aids",
+        "subtitle": "Charts & diagrams",
+        "icon": "image",
+        "color": Color(0xFFF57C00),
+        "usageCount": 15,
+        "timeSaved": "4.1 hrs",
+        "action": "visual",
+      },
+      {
+        "title": "Ask AI",
+        "subtitle": "Instant help",
+        "icon": "chat",
+        "color": Color(0xFF9C27B0),
+        "usageCount": 23,
+        "timeSaved": "1.8 hrs",
+        "action": "chat",
+      },
+    ];
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 3.w,
+              mainAxisSpacing: 2.h,
+              childAspectRatio: 1.1,
+            ),
+            itemCount: quickActions.length,
+            itemBuilder: (context, index) {
+              final action = quickActions[index];
+              return GestureDetector(
+                onTap: () => onActionTap(action["action"] as String),
+                child: Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: BoxDecoration(
+                    color: AppTheme.lightTheme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.lightTheme.colorScheme.outline.withValues(
+                        alpha: 0.2,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.lightTheme.colorScheme.shadow,
+                        offset: Offset(0, 2),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(2.w),
+                            decoration: BoxDecoration(
+                              color: (action["color"] as Color).withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: CustomIconWidget(
+                              iconName: action["icon"] as String,
+                              color: action["color"] as Color,
+                              size: 24,
+                            ),
+                          ),
+                          Spacer(),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 2.w,
+                              vertical: 0.5.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme
+                                  .lightTheme
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${action["usageCount"]}',
+                              style: AppTheme.lightTheme.textTheme.labelSmall
+                                  ?.copyWith(
+                                    color:
+                                        AppTheme.lightTheme.colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        action["title"] as String,
+                        style: AppTheme.lightTheme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 0.5.h),
+                      Text(
+                        action["subtitle"] as String,
+                        style: AppTheme.lightTheme.textTheme.bodySmall
+                            ?.copyWith(
+                              color: AppTheme
+                                  .lightTheme
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Spacer(),
+                      Row(
+                        children: [
+                          CustomIconWidget(
+                            iconName: 'schedule',
+                            color: AppTheme
+                                .lightTheme
+                                .colorScheme
+                                .onSurfaceVariant,
+                            size: 14,
+                          ),
+                          SizedBox(width: 1.w),
+                          Text(
+                            'Saved ${action["timeSaved"]}',
+                            style: AppTheme.lightTheme.textTheme.labelSmall
+                                ?.copyWith(
+                                  color: AppTheme
+                                      .lightTheme
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
   }
 }
