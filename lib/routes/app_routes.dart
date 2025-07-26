@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:guru_ai/presentation/auth_screen/auth_screen.dart';
 import '../presentation/teacher_dashboard/teacher_dashboard.dart';
 import '../presentation/assignment_creation/assignment_creation.dart';
 import '../presentation/class_detail/class_detail.dart';
@@ -6,6 +7,7 @@ import '../presentation/ai_tutor_chat/ai_tutor_chat.dart';
 import '../presentation/student_dashboard/student_dashboard.dart';
 import '../presentation/ai_worksheet_generator/ai_worksheet_generator.dart';
 import '../presentation/textbook_scanner/textbook_scanner.dart';
+import '../presentation/wrapper/auth_wrapper.dart';
 
 class AppRoutes {
   // TODO: Add your routes here
@@ -20,8 +22,8 @@ class AppRoutes {
   static const String textbookScanner = '/textbook-scanner';
 
   static Map<String, WidgetBuilder> routes = {
-    auth: (context) => const TeacherDashboard(), // Placeholder for auth route
-    initial: (context) => const TeacherDashboard(),
+    initial: (context) => const AuthScreen(),
+    auth: (context) => const AuthScreen(),
     teacherDashboard: (context) => const TeacherDashboard(),
     assignmentCreation: (context) => const AssignmentCreation(),
     classDetail: (context) => const ClassDetail(),
@@ -29,6 +31,5 @@ class AppRoutes {
     studentDashboard: (context) => const StudentDashboard(),
     aiWorksheetGenerator: (context) => const AiWorksheetGenerator(),
     textbookScanner: (context) => const TextbookScannerScreen(),
-    // TODO: Add your other routes here
   };
 }
