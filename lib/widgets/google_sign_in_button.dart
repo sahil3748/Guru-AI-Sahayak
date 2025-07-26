@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:guru_ai/api_service/api_service.dart';
 import 'package:guru_ai/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleSignInButton extends StatefulWidget {
   final Function(bool)? onSignInComplete;
@@ -68,7 +69,15 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
                               "profile_image": userCredential.user!.photoURL,
                             };
 
-                            apiService.post(ApiEndPoint.auth, data: data);
+                            final response = await apiService.post(
+                              ApiEndPoint.auth,
+                              data: data,
+                            );
+                            String apiEssencialId =
+                                response.data['user_id'] ?? '';
+                            SharedPreferences prefs =
+                                await SharedPreferences.getInstance();
+                            prefs.setString('api_essential_id', apiEssencialId);
                             widget.onSignInComplete?.call(true);
                           } catch (e) {
                             widget.onSignInComplete?.call(false);

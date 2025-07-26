@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:guru_ai/main.dart';
 import 'package:guru_ai/presentation/settings/settings_screen.dart';
 import 'package:guru_ai/presentation/teacher_dashboard/teacher_dashboard.dart';
-// import '../presentation/dashboard/teacher_dashboard.dart';
 import '../presentation/auth/google_auth_page.dart';
 import '../presentation/assignment_creation/assignment_creation.dart';
 import '../presentation/class_detail/class_detail.dart';
 import '../presentation/ai_tutor_chat/ai_tutor_chat.dart';
-import '../presentation/student_dashboard/student_dashboard.dart';
 import '../presentation/ai_worksheet_generator/ai_worksheet_generator.dart';
 import '../presentation/textbook_scanner/textbook_scanner.dart';
 
@@ -33,7 +31,7 @@ class AppRoutes {
     assignmentCreation: (context) => const AssignmentCreation(),
     classDetail: (context) => const ClassDetail(),
     aiTutorChat: (context) => const AiTutorChat(),
-    studentDashboard: (context) => const StudentDashboard(),
+    // studentDashboard: (context) => const StudentDashboard(),
     aiWorksheetGenerator: (context) => const AiWorksheetGenerator(),
     textbookScanner: (context) => const TextbookScannerScreen(),
     // TODO: Add your other routes here

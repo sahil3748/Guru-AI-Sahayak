@@ -1,5 +1,7 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:guru_ai/api_service/api_service.dart';
+import 'package:guru_ai/api_service/visual_aids_service.dart';
+import 'package:guru_ai/models/visual_aids_response.dart';
 import 'package:guru_ai/theme/app_theme.dart';
 import 'package:guru_ai/widgets/custom_icon_widget.dart';
 import 'package:guru_ai/widgets/custom_image_widget.dart';
@@ -15,9 +17,10 @@ class DiagramCreationWidget extends StatefulWidget {
 class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
   final TextEditingController _descriptionController = TextEditingController();
   String _selectedSubject = 'Science';
-  String _selectedTemplate = 'Water Cycle';
   bool _isGenerating = false;
-  String? _generatedDiagram;
+  VisualAid? _generatedVisualAid;
+  final VisualAidsService _visualAidsService = VisualAidsService();
+  String? _errorMessage;
 
   final List<String> _subjects = [
     'Science',
@@ -25,80 +28,7 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
     'History',
     'Geography',
     'Biology',
-  ];
-
-  final Map<String, List<String>> _templates = {
-    'Science': [
-      'Water Cycle',
-      'Solar System',
-      'Plant Cell',
-      'Food Chain',
-      'States of Matter',
-    ],
-    'Mathematics': [
-      'Geometric Shapes',
-      'Number Line',
-      'Coordinate System',
-      'Fractions',
-      'Angles',
-    ],
-    'History': [
-      'Timeline',
-      'Family Tree',
-      'Battle Map',
-      'Trade Routes',
-      'Government Structure',
-    ],
-    'Geography': [
-      'World Map',
-      'Climate Zones',
-      'Mountain Formation',
-      'River System',
-      'Continents',
-    ],
-    'Biology': [
-      'Human Body',
-      'Animal Classification',
-      'Ecosystem',
-      'DNA Structure',
-      'Digestive System',
-    ],
-  };
-
-  final List<Map<String, dynamic>> _mockDiagrams = [
-    {
-      "id": 1,
-      "title": "Water Cycle Diagram",
-      "description":
-          "Simple water cycle showing evaporation, condensation, and precipitation",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1544551763-46a013bb70d5?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3",
-      "subject": "Science",
-      "complexity": "Simple",
-      "steps": [
-        "Draw sun in top right corner",
-        "Add wavy lines for evaporation from ocean",
-        "Draw clouds in the sky",
-        "Add arrows showing water movement",
-        "Label each process clearly",
-      ],
-    },
-    {
-      "id": 2,
-      "title": "Plant Cell Structure",
-      "description": "Detailed plant cell with all major organelles labeled",
-      "imageUrl":
-          "https://images.unsplash.com/photo-1576086213369-97a306d36557?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3",
-      "subject": "Science",
-      "complexity": "Detailed",
-      "steps": [
-        "Draw outer cell wall as rectangle",
-        "Add cell membrane inside",
-        "Draw nucleus in center",
-        "Add chloroplasts as green ovals",
-        "Include vacuole and other organelles",
-      ],
-    },
+    'Social Studies',
   ];
 
   void _generateDiagram() async {
@@ -106,15 +36,34 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
 
     setState(() {
       _isGenerating = true;
+      _errorMessage = null;
     });
 
-    // Simulate AI generation
-    await Future.delayed(Duration(seconds: 2));
+    try {
+      // Call the API service
+      final response = await _visualAidsService.generateVisualAid(
+        description: _descriptionController.text.trim(),
+        subject: _selectedSubject,
+      );
 
-    setState(() {
-      _isGenerating = false;
-      _generatedDiagram = _mockDiagrams.first['imageUrl'] as String;
-    });
+      if (response.visualAids.isNotEmpty) {
+        setState(() {
+          _isGenerating = false;
+          _generatedVisualAid = response.visualAids.first;
+        });
+      } else {
+        setState(() {
+          _isGenerating = false;
+          _errorMessage = 'No visual aids were generated. Please try again.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isGenerating = false;
+        _errorMessage = 'Error generating visual aid: ${e.toString()}';
+      });
+      print('Error generating visual aid: $e');
+    }
   }
 
   @override
@@ -128,15 +77,34 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
           SizedBox(height: 3.h),
           _buildSubjectSelector(),
           SizedBox(height: 3.h),
-          _buildTemplateSelector(),
-          SizedBox(height: 3.h),
           _buildGenerateButton(),
-          if (_generatedDiagram != null) ...[
+          if (_errorMessage != null) ...[
+            SizedBox(height: 3.h),
+            _buildErrorMessage(),
+          ],
+          if (_generatedVisualAid != null) ...[
             SizedBox(height: 3.h),
             _buildGeneratedDiagram(),
           ],
           SizedBox(height: 3.h),
         ],
+      ),
+    );
+  }
+
+  Widget _buildErrorMessage() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(4.w),
+      decoration: BoxDecoration(
+        color: AppTheme.lightTheme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        _errorMessage ?? 'An error occurred',
+        style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+          color: AppTheme.lightTheme.colorScheme.onErrorContainer,
+        ),
       ),
     );
   }
@@ -213,49 +181,6 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
               onChanged: (value) {
                 setState(() {
                   _selectedSubject = value!;
-                  _selectedTemplate = _templates[_selectedSubject]!.first;
-                });
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTemplateSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Template',
-          style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 1.h),
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
-          decoration: BoxDecoration(
-            color: AppTheme.lightTheme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: AppTheme.lightTheme.colorScheme.outline.withValues(
-                alpha: 0.3,
-              ),
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedTemplate,
-              isExpanded: true,
-              items: _templates[_selectedSubject]!.map((template) {
-                return DropdownMenuItem(value: template, child: Text(template));
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedTemplate = value!;
                 });
               },
             ),
@@ -266,51 +191,95 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
   }
 
   Widget _buildGenerateButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 6.h,
-      child: ElevatedButton(
-        onPressed: _isGenerating ? null : _generateDiagram,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.lightTheme.colorScheme.primary,
-          foregroundColor: AppTheme.lightTheme.colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: _isGenerating
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 5.w,
-                    height: 5.w,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.lightTheme.colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 3.w),
-                  Text('Generating...'),
-                ],
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CustomIconWidget(
-                    iconName: 'auto_awesome',
-                    color: AppTheme.lightTheme.colorScheme.onPrimary,
-                    size: 20,
-                  ),
-                  SizedBox(width: 2.w),
-                  Text('Generate Diagram'),
-                ],
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 6.h,
+          child: ElevatedButton(
+            onPressed: _isGenerating ? null : _generateDiagram,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+              foregroundColor: AppTheme.lightTheme.colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-      ),
+            ),
+            child: _isGenerating
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 5.w,
+                        height: 5.w,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppTheme.lightTheme.colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 3.w),
+                      Text('Generating...'),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomIconWidget(
+                        iconName: 'auto_awesome',
+                        color: AppTheme.lightTheme.colorScheme.onPrimary,
+                        size: 20,
+                      ),
+                      SizedBox(width: 2.w),
+                      Text('Generate Diagram'),
+                    ],
+                  ),
+          ),
+        ),
+        if (_isGenerating) ...[
+          SizedBox(height: 3.h),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: AppTheme.lightTheme.colorScheme.primaryContainer
+                  .withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  backgroundColor: AppTheme.lightTheme.colorScheme.primary
+                      .withValues(alpha: 0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppTheme.lightTheme.colorScheme.primary,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  'Creating your visual aid...\nThis may take 10-15 seconds',
+                  textAlign: TextAlign.center,
+                  style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightTheme.colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 
   Widget _buildGeneratedDiagram() {
+    // Get the drawing instructions as a list
+    List<String> instructions = _generatedVisualAid!.getNumberedInstructions();
+
+    // Construct the full image URL
+    // String baseUrl = 'https://backend-infra-200499489667.us-central1.run.app';
+    String imageUrl = ApiService.baseUrl + _generatedVisualAid!.imageUrl;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -326,7 +295,7 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
           Padding(
             padding: EdgeInsets.all(4.w),
             child: Text(
-              'Generated Diagram',
+              _generatedVisualAid!.title,
               style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -335,10 +304,38 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: CustomImageWidget(
-              imageUrl: _generatedDiagram!,
+              imageUrl: imageUrl,
               width: double.infinity,
               height: 25.h,
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
+              errorWidget: Container(
+                width: double.infinity,
+                height: 25.h,
+                color: AppTheme.lightTheme.colorScheme.errorContainer,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomIconWidget(
+                        iconName: 'error_outline',
+                        color: AppTheme.lightTheme.colorScheme.onErrorContainer,
+                        size: 48,
+                      ),
+                      SizedBox(height: 1.h),
+                      Text(
+                        'Failed to load image',
+                        style: AppTheme.lightTheme.textTheme.bodyMedium
+                            ?.copyWith(
+                              color: AppTheme
+                                  .lightTheme
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           Padding(
@@ -353,9 +350,7 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
                   ),
                 ),
                 SizedBox(height: 1.h),
-                ...((_mockDiagrams.first['steps'] as List).asMap().entries.map((
-                  entry,
-                ) {
+                ...(instructions.asMap().entries.map((entry) {
                   return Padding(
                     padding: EdgeInsets.only(bottom: 0.5.h),
                     child: Row(
@@ -368,7 +363,7 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
                         ),
                         Expanded(
                           child: Text(
-                            entry.value as String,
+                            entry.value,
                             style: AppTheme.lightTheme.textTheme.bodyMedium,
                           ),
                         ),
@@ -377,33 +372,33 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
                   );
                 }).toList()),
                 SizedBox(height: 2.h),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: CustomIconWidget(
-                          iconName: 'download',
-                          color: AppTheme.lightTheme.colorScheme.primary,
-                          size: 18,
-                        ),
-                        label: Text('Export'),
-                      ),
-                    ),
-                    SizedBox(width: 3.w),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: CustomIconWidget(
-                          iconName: 'share',
-                          color: AppTheme.lightTheme.colorScheme.primary,
-                          size: 18,
-                        ),
-                        label: Text('Share'),
-                      ),
-                    ),
-                  ],
-                ),
+                // Row(
+                //   children: [
+                //     Expanded(
+                //       child: OutlinedButton.icon(
+                //         onPressed: () {},
+                //         icon: CustomIconWidget(
+                //           iconName: 'download',
+                //           color: AppTheme.lightTheme.colorScheme.primary,
+                //           size: 18,
+                //         ),
+                //         label: Text('Export'),
+                //       ),
+                //     ),
+                //     SizedBox(width: 3.w),
+                //     Expanded(
+                //       child: OutlinedButton.icon(
+                //         onPressed: () {},
+                //         icon: CustomIconWidget(
+                //           iconName: 'share',
+                //           color: AppTheme.lightTheme.colorScheme.primary,
+                //           size: 18,
+                //         ),
+                //         label: Text('Share'),
+                //       ),
+                //     ),
+                //   ],
+                // ),
               ],
             ),
           ),

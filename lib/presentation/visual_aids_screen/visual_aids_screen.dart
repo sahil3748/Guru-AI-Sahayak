@@ -1,11 +1,9 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/widgets/chart_creation_widget.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/widgets/diagram_creation_widget.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/widgets/drawing_templates_widget.dart';
 import 'package:guru_ai/theme/app_theme.dart';
 import 'package:guru_ai/widgets/custom_icon_widget.dart';
-import 'package:guru_ai/widgets/custom_image_widget.dart';
 import 'package:sizer/sizer.dart';
 
 class VisualAidsCreatorScreen extends StatefulWidget {
@@ -18,15 +16,6 @@ class VisualAidsCreatorScreen extends StatefulWidget {
 
 class _VisualAidsCreatorScreenState extends State<VisualAidsCreatorScreen>
     with TickerProviderStateMixin {
-  late TabController _tabController;
-  int _currentTabIndex = 0;
-
-  // Customization settings
-  double _lineThickness = 2.0;
-  String _complexity = 'Medium';
-  double _labelSize = 14.0;
-  bool _highContrast = false;
-
   final List<Map<String, dynamic>> _tabs = [
     {
       'title': 'Diagrams',
@@ -48,17 +37,10 @@ class _VisualAidsCreatorScreenState extends State<VisualAidsCreatorScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    _tabController.addListener(() {
-      setState(() {
-        _currentTabIndex = _tabController.index;
-      });
-    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -69,16 +51,12 @@ class _VisualAidsCreatorScreenState extends State<VisualAidsCreatorScreen>
       appBar: _buildAppBar(),
       body: Column(
         children: [
-          _buildTabBar(),
+          // _buildTabBar(),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                DiagramCreationWidget(),
-                ChartCreationWidget(),
-                DrawingTemplatesWidget(),
-              ],
-            ),
+            child: DiagramCreationWidget(),
+
+            // ChartCreationWidget(),
+            // DrawingTemplatesWidget(),
           ),
           // CustomizationPanelWidget(
           //   onLineThicknessChanged: (value) {
@@ -129,76 +107,14 @@ class _VisualAidsCreatorScreenState extends State<VisualAidsCreatorScreen>
               fontWeight: FontWeight.w600,
             ),
           ),
-          Text(
-            _tabs[_currentTabIndex]['description'] as String,
-            style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-              color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
-            ),
-          ),
+          // Text(
+          //   _tabs[_currentTabIndex]['description'] as String,
+          //   style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
+          //     color: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+          //   ),
+          // ),
         ],
       ),
-      actions: [
-        IconButton(
-          onPressed: _showHelpDialog,
-          icon: CustomIconWidget(
-            iconName: 'help_outline',
-            color: AppTheme.lightTheme.colorScheme.onSurface,
-            size: 24,
-          ),
-        ),
-        PopupMenuButton<String>(
-          onSelected: _handleMenuSelection,
-          icon: CustomIconWidget(
-            iconName: 'more_vert',
-            color: AppTheme.lightTheme.colorScheme.onSurface,
-            size: 24,
-          ),
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'library',
-              child: Row(
-                children: [
-                  CustomIconWidget(
-                    iconName: 'library_books',
-                    color: AppTheme.lightTheme.colorScheme.onSurface,
-                    size: 20,
-                  ),
-                  SizedBox(width: 3.w),
-                  Text('Content Library'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: 'settings',
-              child: Row(
-                children: [
-                  CustomIconWidget(
-                    iconName: 'settings',
-                    color: AppTheme.lightTheme.colorScheme.onSurface,
-                    size: 20,
-                  ),
-                  SizedBox(width: 3.w),
-                  Text('Settings'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: 'feedback',
-              child: Row(
-                children: [
-                  CustomIconWidget(
-                    iconName: 'feedback',
-                    color: AppTheme.lightTheme.colorScheme.onSurface,
-                    size: 20,
-                  ),
-                  SizedBox(width: 3.w),
-                  Text('Send Feedback'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
       bottom: PreferredSize(
         preferredSize: Size.fromHeight(1),
         child: Container(
@@ -206,67 +122,6 @@ class _VisualAidsCreatorScreenState extends State<VisualAidsCreatorScreen>
           color: AppTheme.lightTheme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Container(
-      color: AppTheme.lightTheme.colorScheme.surface,
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: AppTheme.lightTheme.colorScheme.primary,
-        indicatorWeight: 3,
-        labelColor: AppTheme.lightTheme.colorScheme.primary,
-        unselectedLabelColor: AppTheme.lightTheme.colorScheme.onSurfaceVariant,
-        labelStyle: AppTheme.lightTheme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: AppTheme.lightTheme.textTheme.titleSmall
-            ?.copyWith(fontWeight: FontWeight.w400),
-        tabs: _tabs.map((tab) {
-          return Tab(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CustomIconWidget(
-                  iconName: tab['icon'] as String,
-                  color: _currentTabIndex == _tabs.indexOf(tab)
-                      ? AppTheme.lightTheme.colorScheme.primary
-                      : AppTheme.lightTheme.colorScheme.onSurfaceVariant,
-                  size: 20,
-                ),
-                SizedBox(width: 2.w),
-                Flexible(
-                  child: Text(
-                    tab['title'] as String,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton(
-      onPressed: _showVoiceInputDialog,
-      backgroundColor: AppTheme.lightTheme.colorScheme.primary,
-      foregroundColor: AppTheme.lightTheme.colorScheme.onPrimary,
-      child: CustomIconWidget(
-        iconName: 'mic',
-        color: AppTheme.lightTheme.colorScheme.onPrimary,
-        size: 20,
-      ),
-      // label: Text(
-      //   'Voice Input',
-      //   style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
-      //     color: AppTheme.lightTheme.colorScheme.onPrimary,
-      //     fontWeight: FontWeight.w600,
-      //   ),
-      // ),
     );
   }
 

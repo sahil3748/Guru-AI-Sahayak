@@ -171,9 +171,7 @@ class _AssignmentCreationState extends State<AssignmentCreation> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -224,7 +222,9 @@ class _AssignmentCreationState extends State<AssignmentCreation> {
                     onPressed: () {
                       Navigator.pop(context);
                       Navigator.pushReplacementNamed(
-                          context, '/teacher-dashboard');
+                        context,
+                        '/teacher-dashboard',
+                      );
                     },
                     child: const Text('View Dashboard'),
                   ),
@@ -322,16 +322,14 @@ class _AssignmentCreationState extends State<AssignmentCreation> {
                               Text(
                                 _classData["name"],
                                 style: AppTheme.lightTheme.textTheme.titleMedium
-                                    ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                    ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                               Text(
                                 '${_classData["students"]} students • ${_classData["teacher"]}',
                                 style: AppTheme.lightTheme.textTheme.bodySmall
                                     ?.copyWith(
-                                  color: AppTheme.onSurfaceSecondary,
-                                ),
+                                      color: AppTheme.onSurfaceSecondary,
+                                    ),
                               ),
                             ],
                           ),
@@ -415,10 +413,8 @@ class _AssignmentCreationState extends State<AssignmentCreation> {
                       SizedBox(height: 2.h),
                       Text(
                         _isDraft ? 'Saving Draft...' : 'Creating Assignment...',
-                        style:
-                            AppTheme.lightTheme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: AppTheme.lightTheme.textTheme.bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -431,9 +427,7 @@ class _AssignmentCreationState extends State<AssignmentCreation> {
         padding: EdgeInsets.all(4.w),
         decoration: BoxDecoration(
           color: AppTheme.surfaceWhite,
-          border: Border(
-            top: BorderSide(color: AppTheme.outlineLight),
-          ),
+          border: Border(top: BorderSide(color: AppTheme.outlineLight)),
         ),
         child: SafeArea(
           child: Row(
@@ -450,7 +444,8 @@ class _AssignmentCreationState extends State<AssignmentCreation> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () => _saveAssignment(),
                   child: Text(
-                      _isVisible ? 'Create & Publish' : 'Create Assignment'),
+                    _isVisible ? 'Create & Publish' : 'Create Assignment',
+                  ),
                 ),
               ),
             ],

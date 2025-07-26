@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 
 class ApiEndPoint {
   static String auth = "/user/register";
+  static String generateHyperLocalContent = "/agent/hyper-local-content";
+  static String generateVisualAids = "/agent/visual-aids";
 }
 
 class ApiService {
@@ -15,8 +17,8 @@ class ApiService {
     : _dio = Dio(
         BaseOptions(
           baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 10),
+          connectTimeout: const Duration(seconds: 30), // Increased timeout
+          receiveTimeout: const Duration(seconds: 30), // Increased timeout
           headers: {'Content-Type': 'application/json'},
         ),
       ) {

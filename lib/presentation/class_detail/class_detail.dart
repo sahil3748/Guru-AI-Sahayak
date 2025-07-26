@@ -250,12 +250,15 @@ class _ClassDetailState extends State<ClassDetail> {
           isTeacher: _isTeacher,
           onTap: () => _handleAssignmentTap(assignment),
           onEdit: _isTeacher ? () => _handleEditAssignment(assignment) : null,
-          onDelete:
-              _isTeacher ? () => _handleDeleteAssignment(assignment) : null,
-          onSubmit:
-              !_isTeacher ? () => _handleSubmitAssignment(assignment) : null,
-          onViewFeedback:
-              !_isTeacher ? () => _handleViewFeedback(assignment) : null,
+          onDelete: _isTeacher
+              ? () => _handleDeleteAssignment(assignment)
+              : null,
+          onSubmit: !_isTeacher
+              ? () => _handleSubmitAssignment(assignment)
+              : null,
+          onViewFeedback: !_isTeacher
+              ? () => _handleViewFeedback(assignment)
+              : null,
         );
       },
     );
@@ -433,8 +436,9 @@ class _ClassDetailState extends State<ClassDetail> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Delete Assignment'),
-        content:
-            Text('Are you sure you want to delete "${assignment['title']}"?'),
+        content: Text(
+          'Are you sure you want to delete "${assignment['title']}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -452,10 +456,7 @@ class _ClassDetailState extends State<ClassDetail> {
                 gravity: ToastGravity.BOTTOM,
               );
             },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: AppTheme.alertRed),
-            ),
+            child: Text('Delete', style: TextStyle(color: AppTheme.alertRed)),
           ),
         ],
       ),
@@ -581,7 +582,8 @@ class _ClassDetailState extends State<ClassDetail> {
       builder: (context) => AlertDialog(
         title: Text('Remove Student'),
         content: Text(
-            'Are you sure you want to remove ${person['name']} from this class?'),
+          'Are you sure you want to remove ${person['name']} from this class?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -601,10 +603,7 @@ class _ClassDetailState extends State<ClassDetail> {
                 gravity: ToastGravity.BOTTOM,
               );
             },
-            child: Text(
-              'Remove',
-              style: TextStyle(color: AppTheme.alertRed),
-            ),
+            child: Text('Remove', style: TextStyle(color: AppTheme.alertRed)),
           ),
         ],
       ),

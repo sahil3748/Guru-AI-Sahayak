@@ -1,8 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:guru_ai/presentation/hyperlocal_content_generator/hyperlocal_content_generator.dart';
 import 'package:guru_ai/presentation/textbook_scanner/textbook_scanner.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/visual_aids_screen.dart';
 import 'package:guru_ai/services/auth_service.dart';
+import 'package:guru_ai/services/google_classroom_service.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -19,6 +21,13 @@ class TeacherDashboard extends StatefulWidget {
 class _TeacherDashboardState extends State<TeacherDashboard>
     with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
+  final GoogleClassroomService _classroomService = GoogleClassroomService();
+
+  // Loading and data states
+  bool _isLoadingClasses = true;
+  bool _hasClassroomPermissions = false;
+  List<Map<String, dynamic>> _classesData = [];
+  String? _errorMessage;
 
   // Mock data for teacher and classes`
   final Map<String, dynamic> teacherData = {
@@ -30,48 +39,108 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     "pendingTasks": 5,
   };
 
-  final List<Map<String, dynamic>> classesData = [
-    {
-      "id": 1,
-      "name": "Mathematics Grade 8A",
-      "subject": "Mathematics",
-      "grade": "8",
-      "studentCount": 32,
-      "recentActivity": "Assignment submitted by 28 students",
-      "unreadAnnouncements": 2,
-      "lastActive": "2 hours ago",
-    },
-    {
-      "id": 2,
-      "name": "Science Grade 7B",
-      "subject": "Science",
-      "grade": "7",
-      "studentCount": 28,
-      "recentActivity": "New worksheet generated for Chapter 5",
-      "unreadAnnouncements": 0,
-      "lastActive": "4 hours ago",
-    },
-    {
-      "id": 3,
-      "name": "English Grade 6C",
-      "subject": "English",
-      "grade": "6",
-      "studentCount": 25,
-      "recentActivity": "Reading assessment completed by 20 students",
-      "unreadAnnouncements": 1,
-      "lastActive": "1 day ago",
-    },
-    {
-      "id": 4,
-      "name": "Hindi Grade 5A",
-      "subject": "Hindi",
-      "grade": "5",
-      "studentCount": 30,
-      "recentActivity": "Lesson plan created for next week",
-      "unreadAnnouncements": 0,
-      "lastActive": "2 days ago",
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _initializeClassroomData();
+  }
+
+  /// Initialize classroom data on widget load
+  Future<void> _initializeClassroomData() async {
+    setState(() {
+      _isLoadingClasses = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Check if user has classroom permissions
+      _hasClassroomPermissions = _classroomService.hasClassroomPermissions;
+
+      if (_hasClassroomPermissions) {
+        await _fetchClassroomData();
+      } else {
+        setState(() {
+          _isLoadingClasses = false;
+          _errorMessage = "Classroom permissions required";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingClasses = false;
+        _errorMessage = "Error initializing classroom data: $e";
+      });
+    }
+  }
+
+  /// Fetch classroom data from Google Classroom
+  Future<void> _fetchClassroomData() async {
+    try {
+      // Use the new googleapis-based approach for better reliability
+      final courses = await _classroomService.getAllCourses();
+
+      setState(() {
+        // Convert to the expected format for the existing UI
+        _classesData = courses
+            .map(
+              (course) => {
+                'id': course.id,
+                'name': course.name,
+                'description': course.description,
+                'room': course.room,
+                'enrollmentCode': course.enrollmentCode,
+                'courseState': course.courseState,
+                'alternateLink': course.alternateLink,
+                'ownerId': course.ownerId,
+                'teacherGroupEmail': course.teacherGroupEmail,
+                'courseGroupEmail': course.courseGroupEmail,
+                'calendarId': course.calendarId ?? '',
+                'guardiansEnabled': course.guardiansEnabled ?? false,
+              },
+            )
+            .toList();
+        _isLoadingClasses = false;
+        _errorMessage = null;
+      });
+
+      print('✅ Successfully loaded ${_classesData.length} courses for UI');
+    } catch (e) {
+      setState(() {
+        _isLoadingClasses = false;
+        _errorMessage = "Error fetching classroom data: $e";
+      });
+      print('❌ Error in _fetchClassroomData: $e');
+    }
+  }
+
+  /// Request classroom permissions
+  Future<void> _requestClassroomPermissions() async {
+    setState(() {
+      _isLoadingClasses = true;
+    });
+
+    try {
+      final hasPermissions = await _classroomService
+          .requestClassroomPermissions();
+
+      if (hasPermissions) {
+        _hasClassroomPermissions = true;
+        await _fetchClassroomData();
+      } else {
+        setState(() {
+          _isLoadingClasses = false;
+          _errorMessage = "Failed to get classroom permissions";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingClasses = false;
+        _errorMessage = "Error requesting permissions: $e";
+      });
+    }
+  }
+
+  // Getter for backward compatibility with existing code
+  List<Map<String, dynamic>> get classesData => _classesData;
 
   @override
   Widget build(BuildContext context) {
@@ -82,86 +151,13 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     return Scaffold(
       backgroundColor: AppTheme.backgroundOffWhite,
       appBar: GreetingHeaderWidget(
-        teacherName: user!.displayName!,
-        profileUrl: user?.photoURL ?? '',
+        teacherName: user.displayName!,
+        profileUrl: user.photoURL ?? '',
         onLanguageSwitch: _handleLanguageSwitch,
       ),
       body: _buildBody(),
       floatingActionButton: _buildFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppTheme.surfaceWhite,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      title: Row(
-        children: [
-          CircleAvatar(
-            radius: 5.w,
-            backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-            child: CustomImageWidget(
-              imageUrl: teacherData["avatar"] as String,
-              width: 10.w,
-              height: 10.w,
-              fit: BoxFit.cover,
-            ),
-          ),
-          SizedBox(width: 3.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  teacherData["name"] as String,
-                  style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.onSurfacePrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  teacherData["school"] as String,
-                  style: AppTheme.lightTheme.textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceSecondary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        SizedBox(width: 2.w),
-        IconButton(
-          onPressed: () => _showNotifications(),
-          icon: Stack(
-            children: [
-              CustomIconWidget(
-                iconName: 'notifications_outlined',
-                color: AppTheme.onSurfacePrimary,
-                size: 6.w,
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 2.w,
-                  height: 2.w,
-                  decoration: BoxDecoration(
-                    color: AppTheme.alertRed,
-                    borderRadius: BorderRadius.circular(1.w),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(width: 2.w),
-      ],
     );
   }
 
@@ -234,7 +230,9 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           ),
         );
         break;
-
+      case 'hyperlocal':
+        _navigateToHyperLocalGenerator();
+        break;
       case 'chat':
         Navigator.pushNamed(context, '/ai-chat-assistant-screen');
         break;
@@ -285,31 +283,169 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
             SizedBox(height: 1.h),
 
-            // Classes List or Empty State
-            classesData.isEmpty
-                ? EmptyStateWidget(
-                    onCreateClass: () => _showCreateClassBottomSheet(),
-                  )
-                : Column(
-                    children: (classesData)
-                        .map(
-                          (classData) => ClassCardWidget(
-                            classData: classData,
-                            onTap: () => _navigateToClassDetail(classData),
-                            onPostAnnouncement: () =>
-                                _postAnnouncement(classData),
-                            onViewStudents: () => _viewStudents(classData),
-                            onClassSettings: () =>
-                                _openClassSettings(classData),
-                          ),
-                        )
-                        .toList(),
-                  ),
+            // Classes List, Loading, or Permission Request
+            _buildClassesSection(),
 
             SizedBox(height: 10.h), // Space for FAB
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildClassesSection() {
+    if (_isLoadingClasses) {
+      return Container(
+        padding: EdgeInsets.all(4.w),
+        child: Center(
+          child: Column(
+            children: [
+              CircularProgressIndicator(color: AppTheme.primaryBlue),
+              SizedBox(height: 2.h),
+              Text(
+                'Loading your classes...',
+                style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.onSurfaceSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!_hasClassroomPermissions) {
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 4.w),
+        padding: EdgeInsets.all(4.w),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.warningYellow),
+        ),
+        child: Column(
+          children: [
+            CustomIconWidget(
+              iconName: 'lock',
+              color: AppTheme.warningYellow,
+              size: 12.w,
+            ),
+            SizedBox(height: 2.h),
+            Text(
+              'Classroom Access Required',
+              style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 1.h),
+            Text(
+              'Grant access to Google Classroom to view and manage your classes.',
+              textAlign: TextAlign.center,
+              style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.onSurfaceSecondary,
+              ),
+            ),
+            SizedBox(height: 3.h),
+            ElevatedButton.icon(
+              onPressed: _requestClassroomPermissions,
+              icon: CustomIconWidget(
+                iconName: 'school',
+                color: AppTheme.surfaceWhite,
+                size: 5.w,
+              ),
+              label: Text(
+                'Grant Access',
+                style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                  color: AppTheme.surfaceWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.5.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Container(
+        margin: EdgeInsets.symmetric(horizontal: 4.w),
+        padding: EdgeInsets.all(4.w),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.red),
+        ),
+        child: Column(
+          children: [
+            CustomIconWidget(iconName: 'error', color: Colors.red, size: 12.w),
+            SizedBox(height: 2.h),
+            Text(
+              'Error Loading Classes',
+              style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 1.h),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.onSurfaceSecondary,
+              ),
+            ),
+            SizedBox(height: 3.h),
+            ElevatedButton.icon(
+              onPressed: _initializeClassroomData,
+              icon: CustomIconWidget(
+                iconName: 'refresh',
+                color: AppTheme.surfaceWhite,
+                size: 5.w,
+              ),
+              label: Text(
+                'Retry',
+                style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                  color: AppTheme.surfaceWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.5.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (classesData.isEmpty) {
+      return EmptyStateWidget(
+        onCreateClass: () => _showCreateClassBottomSheet(),
+      );
+    }
+
+    return Column(
+      children: (classesData)
+          .map(
+            (classData) => ClassCardWidget(
+              classData: classData,
+              onTap: () => _navigateToClassDetail(classData),
+              onPostAnnouncement: () => _postAnnouncement(classData),
+              onViewStudents: () => _viewStudents(classData),
+              onClassSettings: () => _openClassSettings(classData),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -327,7 +463,9 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     );
   }
 
-  Future<void> _handleRefresh() async {}
+  Future<void> _handleRefresh() async {
+    await _fetchClassroomData();
+  }
 
   void _showCreateActionBottomSheet() {
     showModalBottomSheet(
@@ -487,12 +625,13 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     Navigator.pushNamed(context, '/ai-worksheet-generator');
   }
 
-  void _navigateToReadingAssessment() {
-    // Navigate to reading assessment screen
-  }
-
-  void _navigateToLessonPlanner() {
-    // Navigate to lesson planner screen
+  void _navigateToHyperLocalGenerator() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const HyperLocalContentGenerator(),
+      ),
+    );
   }
 
   void _postAnnouncement(Map<String, dynamic> classData) {
@@ -505,10 +644,6 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
   void _openClassSettings(Map<String, dynamic> classData) {
     // Navigate to class settings
-  }
-
-  void _showNotifications() {
-    // Show notifications panel
   }
 
   void _showAllClasses() {
@@ -706,13 +841,13 @@ class QuickActionsWidget extends StatelessWidget {
         "action": "visual",
       },
       {
-        "title": "Ask AI",
-        "subtitle": "Instant help",
-        "icon": "chat",
-        "color": Color(0xFF9C27B0),
-        "usageCount": 23,
-        "timeSaved": "1.8 hrs",
-        "action": "chat",
+        "title": "Hyper-Local Content",
+        "subtitle": "Create in your language",
+        "icon": "translate",
+        "color": Color(0xFF009688),
+        "usageCount": 17,
+        "timeSaved": "2.0 hrs",
+        "action": "hyperlocal",
       },
     ];
 

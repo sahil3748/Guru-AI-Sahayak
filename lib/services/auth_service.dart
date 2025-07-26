@@ -1,13 +1,66 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  late final GoogleSignIn _googleSignIn = GoogleSignIn(
+
+  // Basic Google Sign-In with minimal permissions
+  late final GoogleSignIn _basicGoogleSignIn = GoogleSignIn(
     signInOption: SignInOption.standard,
     scopes: ['email', 'profile'],
+  );
+
+  // Google Sign-In with classroom permissions for when user accesses classroom features
+  late final GoogleSignIn _classroomGoogleSignIn = GoogleSignIn(
+    signInOption: SignInOption.standard,
+    scopes: [
+      'email',
+      'profile',
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+      'https://www.googleapis.com/auth/classroom.rosters.readonly',
+      'https://www.googleapis.com/auth/classroom.profile.emails',
+      'https://www.googleapis.com/auth/classroom.profile.photos',
+
+      // Course management
+      'https://www.googleapis.com/auth/classroom.courses',
+      'https://www.googleapis.com/auth/classroom.courses.readonly',
+
+      // Roster management
+      'https://www.googleapis.com/auth/classroom.rosters',
+      'https://www.googleapis.com/auth/classroom.rosters.readonly',
+      'https://www.googleapis.com/auth/classroom.profile.emails',
+      'https://www.googleapis.com/auth/classroom.profile.photos',
+
+      // Announcements
+      'https://www.googleapis.com/auth/classroom.announcements',
+      'https://www.googleapis.com/auth/classroom.announcements.readonly',
+
+      // Coursework (including quizzes)
+      'https://www.googleapis.com/auth/classroom.coursework.students',
+      'https://www.googleapis.com/auth/classroom.coursework.students.readonly',
+      'https://www.googleapis.com/auth/classroom.coursework.me',
+      'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+
+      // Topics
+      'https://www.googleapis.com/auth/classroom.topics',
+      'https://www.googleapis.com/auth/classroom.topics.readonly',
+
+      // Student submissions
+      'https://www.googleapis.com/auth/classroom.student-submissions.students.readonly',
+      'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+
+      // Guardian access
+      'https://www.googleapis.com/auth/classroom.guardianlinks.students',
+      'https://www.googleapis.com/auth/classroom.guardianlinks.me.readonly',
+
+      // Push notifications
+      'https://www.googleapis.com/auth/classroom.push-notifications',
+
+      // Drive access for classroom materials
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/drive.file',
+    ],
   );
 
   // Stream to listen to auth state changes
@@ -18,8 +71,9 @@ class AuthService {
 
   // Track sign in state
   bool _isSigningIn = false;
+  bool _hasClassroomPermissions = false;
 
-  // Sign in with Google
+  // Basic sign in with Google (only email and profile)
   Future<UserCredential?> signInWithGoogle() async {
     // Prevent multiple simultaneous sign-in attempts
     if (_isSigningIn) {
@@ -31,9 +85,9 @@ class AuthService {
 
       // First, try to sign out any existing session
       try {
-        if (_googleSignIn.currentUser != null) {
-          await _googleSignIn.disconnect();
-          await _googleSignIn.signOut();
+        if (_basicGoogleSignIn.currentUser != null) {
+          await _basicGoogleSignIn.disconnect();
+          await _basicGoogleSignIn.signOut();
         }
       } catch (e) {
         print('Pre-signout error (can be ignored): $e');
@@ -44,7 +98,7 @@ class AuthService {
       int retryCount = 0;
       while (googleUser == null && retryCount < 2) {
         try {
-          googleUser = await _googleSignIn.signIn().timeout(
+          googleUser = await _basicGoogleSignIn.signIn().timeout(
             const Duration(seconds: 30),
             onTimeout: () {
               throw TimeoutException('Sign in timeout');
@@ -80,13 +134,80 @@ class AuthService {
     } catch (e) {
       print('Error signing in with Google: $e');
       return null;
+    } finally {
+      _isSigningIn = false;
+    }
+  }
+
+  // Request classroom permissions when user tries to access classroom features
+  Future<bool> requestClassroomPermissions() async {
+    if (_hasClassroomPermissions) {
+      return true; // Already have permissions
+    }
+
+    try {
+      // First sign out from basic Google Sign-In
+      await _basicGoogleSignIn.signOut();
+
+      // Sign in with classroom permissions
+      final GoogleSignInAccount? googleUser = await _classroomGoogleSignIn
+          .signIn();
+
+      if (googleUser == null) {
+        return false; // User cancelled the permission request
+      }
+
+      // Get the authentication details
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create new credential with classroom permissions
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Re-authenticate with Firebase using the new credential
+      await _auth.signInWithCredential(credential);
+
+      _hasClassroomPermissions = true;
+      return true;
+    } catch (e) {
+      print('Error requesting classroom permissions: $e');
+      return false;
+    }
+  }
+
+  // Check if user has classroom permissions
+  bool get hasClassroomPermissions => _hasClassroomPermissions;
+
+  // Get access token for API calls (will have classroom permissions if granted)
+  Future<String?> getAccessToken() async {
+    try {
+      final GoogleSignInAccount? account = _hasClassroomPermissions
+          ? _classroomGoogleSignIn.currentUser
+          : _basicGoogleSignIn.currentUser;
+
+      if (account == null) return null;
+
+      final GoogleSignInAuthentication auth = await account.authentication;
+      return auth.accessToken;
+    } catch (e) {
+      print('Error getting access token: $e');
+      return null;
     }
   }
 
   // Sign out
   Future<void> signOut() async {
     try {
-      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
+      // Sign out from both Google Sign-In instances and Firebase
+      await Future.wait([
+        _auth.signOut(),
+        _basicGoogleSignIn.signOut(),
+        _classroomGoogleSignIn.signOut(),
+      ]);
+      _hasClassroomPermissions = false;
     } catch (e) {
       print('Error signing out: $e');
     }

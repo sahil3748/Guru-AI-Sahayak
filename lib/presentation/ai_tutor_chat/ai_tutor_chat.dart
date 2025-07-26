@@ -252,13 +252,18 @@ class _AiTutorChatState extends State<AiTutorChat> {
   }
 
   void _handleImageMessage(String imagePath) {
-    _sendMessage('I\'ve uploaded an image for help',
-        type: 'image', imageUrl: imagePath);
+    _sendMessage(
+      'I\'ve uploaded an image for help',
+      type: 'image',
+      imageUrl: imagePath,
+    );
   }
 
   void _handleVoiceMessage(String audioPath) {
-    _sendMessage('Voice message: Can you help me with this question?',
-        type: 'voice');
+    _sendMessage(
+      'Voice message: Can you help me with this question?',
+      type: 'voice',
+    );
   }
 
   void _handleHintRequest(String hint) {
@@ -432,7 +437,8 @@ class _AiTutorChatState extends State<AiTutorChat> {
             child: ListView.builder(
               controller: _scrollController,
               padding: EdgeInsets.only(top: 2.h, bottom: 2.h),
-              itemCount: _messages.length +
+              itemCount:
+                  _messages.length +
                   (_isTyping ? 1 : 0) +
                   (_showSubjectPrompts ? 1 : 0) +
                   (_showQuickReplies ? 1 : 0) +
