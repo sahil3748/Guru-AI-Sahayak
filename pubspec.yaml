@@ -55,6 +55,10 @@ dependencies:
   universal_html: ^2.2.4
   # record: ^5.0.4
   file_picker: ^10.2.0
+  firebase_auth:
+  google_sign_in: 
+  googleapis: 
+  googleapis_auth:
 
 
 dev_dependencies:

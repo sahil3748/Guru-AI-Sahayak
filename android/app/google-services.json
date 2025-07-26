@@ -12,7 +12,20 @@
           "package_name": "com.example.guru_ai"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "282796537878-aega3jpo5ni21h4vb7hu8o5de21e4384.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.guru_ai",
+            "certificate_hash": "e34a02efad48f0a9388747e545b596efbc11dd72"
+          }
+        },
+        {
+          "client_id": "282796537878-3teqsjclkggmqn0oeh2793fk81jucghs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDAg8yfRXlmaz4Y0YcVfdARzqcdNlDtTOo"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "282796537878-3teqsjclkggmqn0oeh2793fk81jucghs.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "282796537878-pksealips2esvv7b97ptnkbnn9ghgptj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.guruAi"
+              }
+            }
+          ]
         }
       }
     }

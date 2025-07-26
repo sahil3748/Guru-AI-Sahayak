@@ -10,6 +10,7 @@ import '../presentation/textbook_scanner/textbook_scanner.dart';
 class AppRoutes {
   // TODO: Add your routes here
   static const String initial = '/';
+  static const String auth = '/auth';
   static const String teacherDashboard = '/teacher-dashboard';
   static const String assignmentCreation = '/assignment-creation';
   static const String classDetail = '/class-detail';
@@ -19,6 +20,7 @@ class AppRoutes {
   static const String textbookScanner = '/textbook-scanner';
 
   static Map<String, WidgetBuilder> routes = {
+    auth: (context) => const TeacherDashboard(), // Placeholder for auth route
     initial: (context) => const TeacherDashboard(),
     teacherDashboard: (context) => const TeacherDashboard(),
     assignmentCreation: (context) => const AssignmentCreation(),
