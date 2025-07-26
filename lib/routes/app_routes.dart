@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import '../presentation/teacher_dashboard/teacher_dashboard.dart';
+import 'package:guru_ai/main.dart';
+import 'package:guru_ai/presentation/settings/settings_screen.dart';
+import 'package:guru_ai/presentation/teacher_dashboard/teacher_dashboard.dart';
+// import '../presentation/dashboard/teacher_dashboard.dart';
+import '../presentation/auth/google_auth_page.dart';
 import '../presentation/assignment_creation/assignment_creation.dart';
 import '../presentation/class_detail/class_detail.dart';
 import '../presentation/ai_tutor_chat/ai_tutor_chat.dart';
@@ -8,9 +12,10 @@ import '../presentation/ai_worksheet_generator/ai_worksheet_generator.dart';
 import '../presentation/textbook_scanner/textbook_scanner.dart';
 
 class AppRoutes {
-  // TODO: Add your routes here
   static const String initial = '/';
+  static const String splashScreen = '/splashScreen';
   static const String auth = '/auth';
+  static const String settings = '/settings';
   static const String teacherDashboard = '/teacher-dashboard';
   static const String assignmentCreation = '/assignment-creation';
   static const String classDetail = '/class-detail';
@@ -20,8 +25,10 @@ class AppRoutes {
   static const String textbookScanner = '/textbook-scanner';
 
   static Map<String, WidgetBuilder> routes = {
-    auth: (context) => const TeacherDashboard(), // Placeholder for auth route
-    initial: (context) => const TeacherDashboard(),
+    initial: (context) => const SplashScreen(),
+    splashScreen: (context) => SplashScreen(),
+    settings: (context) => const SettingsScreen(),
+    auth: (context) => const GoogleAuthPage(),
     teacherDashboard: (context) => const TeacherDashboard(),
     assignmentCreation: (context) => const AssignmentCreation(),
     classDetail: (context) => const ClassDetail(),

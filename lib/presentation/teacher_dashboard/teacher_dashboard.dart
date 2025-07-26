@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:guru_ai/presentation/textbook_scanner/textbook_scanner.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/visual_aids_screen.dart';
+import 'package:guru_ai/services/auth_service.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -16,6 +18,8 @@ class TeacherDashboard extends StatefulWidget {
 
 class _TeacherDashboardState extends State<TeacherDashboard>
     with TickerProviderStateMixin {
+  final AuthService _authService = AuthService();
+
   // Mock data for teacher and classes`
   final Map<String, dynamic> teacherData = {
     "name": "Teacher",
@@ -71,10 +75,15 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
   @override
   Widget build(BuildContext context) {
+    final user = _authService.currentUser;
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       backgroundColor: AppTheme.backgroundOffWhite,
       appBar: GreetingHeaderWidget(
-        teacherName: teacherData["name"] as String,
+        teacherName: user!.displayName!,
+        profileUrl: user?.photoURL ?? '',
         onLanguageSwitch: _handleLanguageSwitch,
       ),
       body: _buildBody(),
@@ -514,11 +523,13 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 class GreetingHeaderWidget extends StatelessWidget
     implements PreferredSizeWidget {
   final String teacherName;
+  final String profileUrl;
   final VoidCallback onLanguageSwitch;
 
   const GreetingHeaderWidget({
     Key? key,
     required this.teacherName,
+    required this.profileUrl,
     required this.onLanguageSwitch,
   }) : super(key: key);
 
@@ -576,40 +587,64 @@ class GreetingHeaderWidget extends StatelessWidget
               ],
             ),
           ),
+
+          // Text(profileUrl),
           GestureDetector(
-            onTap: onLanguageSwitch,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
-              decoration: BoxDecoration(
-                color: AppTheme.lightTheme.colorScheme.primaryContainer
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppTheme.lightTheme.colorScheme.outline.withValues(
-                    alpha: 0.3,
-                  ),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CustomIconWidget(
-                    iconName: 'language',
-                    color: AppTheme.lightTheme.colorScheme.primary,
-                    size: 18,
-                  ),
-                  SizedBox(width: 1.w),
-                  Text(
-                    'EN',
-                    style: AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
-                      color: AppTheme.lightTheme.colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.settings);
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadiusGeometry.circular(100),
+              child: SizedBox(
+                width: 50,
+                height: 50,
+                child: CachedNetworkImage(imageUrl: profileUrl),
               ),
             ),
           ),
+          // CircleAvatar(
+          //   radius: 40,
+
+          //   backgroundImage: NetworkImage(profileUrl),
+          //   onBackgroundImageError: (_, __) {
+          //     // Handle error when image fails to load
+          //   },
+          // ),
+
+          // GestureDetector(
+          //   onTap: onLanguageSwitch,
+          //   child: Container(
+          //     padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+          //     decoration: BoxDecoration(
+          //       color: AppTheme.lightTheme.colorScheme.primaryContainer
+          //           .withValues(alpha: 0.1),
+          //       borderRadius: BorderRadius.circular(20),
+          //       border: Border.all(
+          //         color: AppTheme.lightTheme.colorScheme.outline.withValues(
+          //           alpha: 0.3,
+          //         ),
+          //       ),
+          //     ),
+          //     child: Row(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         CustomIconWidget(
+          //           iconName: 'language',
+          //           color: AppTheme.lightTheme.colorScheme.primary,
+          //           size: 18,
+          //         ),
+          //         SizedBox(width: 1.w),
+          //         Text(
+          //           'EN',
+          //           style: AppTheme.lightTheme.textTheme.labelMedium?.copyWith(
+          //             color: AppTheme.lightTheme.colorScheme.primary,
+          //             fontWeight: FontWeight.w500,
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

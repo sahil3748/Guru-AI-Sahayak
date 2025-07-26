@@ -20,6 +20,9 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
+  <!-- Google Sign-in Client ID -->
+  <meta name="google-signin-client_id" content="282796537878-3teqsjclkggmqn0oeh2793fk81jucghs.apps.googleusercontent.com">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -33,6 +36,27 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Firebase Configuration -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAc5HFa1qLAXWp1IykBRdvRI2EaGSiTeo8",
+      authDomain: "guru-ai-sahayak.firebaseapp.com",
+      projectId: "guru-ai-sahayak",
+      storageBucket: "guru-ai-sahayak.firebasestorage.app",
+      messagingSenderId: "282796537878",
+      appId: "1:282796537878:web:c784e0c6a55da8cac91d37",
+      measurementId: "G-1Q7WLM9PXG"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

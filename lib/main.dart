@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:guru_ai/firebase_options.dart';
 import 'package:guru_ai/routes/app_routes.dart';
@@ -10,6 +11,7 @@ import 'package:sizer/sizer.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   // 🚨 CRITICAL: Custom error handling - DO NOT REMOVE
   ErrorWidget.builder = (FlutterErrorDetails details) {
     return CustomErrorWidget(errorDetails: details);
@@ -47,9 +49,41 @@ class MyApp extends StatelessWidget {
           // 🚨 END CRITICAL SECTION
           debugShowCheckedModeBanner: false,
           routes: AppRoutes.routes,
-          initialRoute: AppRoutes.initial,
+          initialRoute: AppRoutes.splashScreen,
         );
       },
     );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    fetchUserDetails();
+    super.initState();
+  }
+
+  fetchUserDetails() {
+    Future.delayed(Duration(seconds: 3)).then((ValueKey) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        FirebaseAuth.instance.currentUser != null
+            ? AppRoutes.teacherDashboard
+            : AppRoutes.auth,
+        (Route<dynamic> route) => false,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold();
   }
 }
