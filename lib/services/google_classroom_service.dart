@@ -91,10 +91,21 @@ class GoogleClassroomService {
         ],
       );
 
-      final account = googleSignIn.currentUser;
+      // Try to get current user, attempt sign-in if none found
+      var account = googleSignIn.currentUser;
+
+      // If no signed-in user, try to sign in silently (token refresh)
+      if (account == null) {
+        try {
+          account = await googleSignIn.signInSilently();
+        } catch (e) {
+          print('❌ Silent sign-in failed: $e');
+        }
+      }
+
       if (account == null) {
         print('❌ No authenticated Google account found');
-        return null;
+        throw Exception('No authenticated Google account found');
       }
 
       print('🔄 Getting authenticated HTTP client for: ${account.email}');
@@ -246,6 +257,12 @@ class GoogleClassroomService {
   Future<List<SimpleCourse>> getAllCourses() async {
     print('🔄 Fetching all courses (teacher + student)');
     try {
+      // First check if we can get a valid API client
+      final classroomApi = await _getClassroomApi();
+      if (classroomApi == null) {
+        throw Exception('No authenticated Google account found');
+      }
+
       final teacherCourses = await getTeacherCourses();
       final studentCourses = await getStudentCourses();
 

@@ -212,4 +212,42 @@ class AuthService {
       print('Error signing out: $e');
     }
   }
+
+  // Check if the user is signed in with Google
+  bool isSignedInWithGoogle() {
+    // Check if user is signed in with Firebase and the provider is Google
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return false;
+
+    // Check if the user has signed in with Google provider
+    return currentUser.providerData.any(
+      (userInfo) => userInfo.providerId == 'google.com',
+    );
+  }
+
+  // Attempt to silently sign in the user (token refresh without UI)
+  Future<UserCredential?> silentSignIn() async {
+    try {
+      // Try to silently sign in with basic Google Sign-In
+      final GoogleSignInAccount? googleUser = await _basicGoogleSignIn
+          .signInSilently();
+      if (googleUser == null) return null;
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      print('Error in silent sign-in: $e');
+      return null;
+    }
+  }
 }

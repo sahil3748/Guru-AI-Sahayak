@@ -5,6 +5,7 @@ import 'package:guru_ai/presentation/textbook_scanner/textbook_scanner.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/visual_aids_screen.dart';
 import 'package:guru_ai/services/auth_service.dart';
 import 'package:guru_ai/services/google_classroom_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
@@ -28,6 +29,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   bool _hasClassroomPermissions = false;
   List<Map<String, dynamic>> _classesData = [];
   String? _errorMessage;
+
+  // Preferences keys
+  static const String _classroomPermissionGrantedKey =
+      'classroom_permission_granted';
+  static const String _googleAuthCompletedKey = 'google_auth_completed';
 
   // Mock data for teacher and classes`
   final Map<String, dynamic> teacherData = {
@@ -53,8 +59,39 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     });
 
     try {
-      // Check if user has classroom permissions
-      _hasClassroomPermissions = _classroomService.hasClassroomPermissions;
+      // Check if we have stored preferences about authentication state
+      final prefs = await SharedPreferences.getInstance();
+      final bool hasCompletedAuth =
+          prefs.getBool(_googleAuthCompletedKey) ?? false;
+
+      // Check if user is signed in with Google
+      bool isSignedIn = _authService.isSignedInWithGoogle();
+
+      // If not signed in but previously completed auth, try silent sign-in
+      if (!isSignedIn && hasCompletedAuth) {
+        final userCredential = await _authService.silentSignIn();
+        isSignedIn = userCredential != null;
+      }
+
+      // If still not signed in and haven't completed auth before, show dialog
+      if (!isSignedIn && !hasCompletedAuth) {
+        bool didAuthenticate = await _showAuthenticationDialog();
+        if (!didAuthenticate) {
+          setState(() {
+            _isLoadingClasses = false;
+            _errorMessage = "Google authentication required";
+          });
+          return;
+        }
+        // Store that user has completed authentication
+        await prefs.setBool(_googleAuthCompletedKey, true);
+      }
+
+      // Check for stored classroom permissions
+      final bool storedHasPermissions =
+          prefs.getBool(_classroomPermissionGrantedKey) ?? false;
+      _hasClassroomPermissions =
+          _classroomService.hasClassroomPermissions || storedHasPermissions;
 
       if (_hasClassroomPermissions) {
         await _fetchClassroomData();
@@ -72,12 +109,71 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     }
   }
 
+  /// Show authentication dialog to the user
+  Future<bool> _showAuthenticationDialog() async {
+    bool shouldSignIn =
+        await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Text('Google Authentication Required'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'You need to sign in with Google before accessing Classroom data.',
+                ),
+                SizedBox(height: 10),
+                Text('Would you like to sign in now?'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('Sign In'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (shouldSignIn) {
+      // Perform the actual sign-in after dialog closes
+      try {
+        final userCredential = await _authService.signInWithGoogle();
+        return userCredential != null;
+      } catch (e) {
+        print('Error during Google sign-in: $e');
+        return false;
+      }
+    }
+
+    return false;
+  }
+
   /// Fetch classroom data from Google Classroom
   Future<void> _fetchClassroomData() async {
     try {
+      // First check if user is authenticated
+      if (!_authService.isSignedInWithGoogle()) {
+        bool didAuthenticate = await _showAuthenticationDialog();
+        if (!didAuthenticate) {
+          setState(() {
+            _isLoadingClasses = false;
+            _errorMessage = "Google authentication required";
+          });
+          return;
+        }
+      }
+
       // Use the new googleapis-based approach for better reliability
       final courses = await _classroomService.getAllCourses();
 
+      // If we get here, we have courses data
       setState(() {
         // Convert to the expected format for the existing UI
         _classesData = courses
@@ -100,14 +196,29 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             .toList();
         _isLoadingClasses = false;
         _errorMessage = null;
+        _hasClassroomPermissions = true; // Update permission state
       });
+
+      // Store successful authentication and permissions
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_googleAuthCompletedKey, true);
+      await prefs.setBool(_classroomPermissionGrantedKey, true);
 
       print('✅ Successfully loaded ${_classesData.length} courses for UI');
     } catch (e) {
-      setState(() {
-        _isLoadingClasses = false;
-        _errorMessage = "Error fetching classroom data: $e";
-      });
+      // Handle specific authentication errors
+      if (e.toString().contains('No authenticated Google account found')) {
+        setState(() {
+          _isLoadingClasses = false;
+          _hasClassroomPermissions = false;
+          _errorMessage = "Authentication required for Google Classroom";
+        });
+      } else {
+        setState(() {
+          _isLoadingClasses = false;
+          _errorMessage = "Error fetching classroom data: $e";
+        });
+      }
       print('❌ Error in _fetchClassroomData: $e');
     }
   }
@@ -124,6 +235,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
       if (hasPermissions) {
         _hasClassroomPermissions = true;
+
+        // Store that permissions were granted
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_classroomPermissionGrantedKey, true);
+
         await _fetchClassroomData();
       } else {
         setState(() {
