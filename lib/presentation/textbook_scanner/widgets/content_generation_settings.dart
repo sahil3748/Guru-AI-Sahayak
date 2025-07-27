@@ -5,14 +5,12 @@ class ContentGenerationOptions {
   final int researchDepth;
   final int contentLength;
   final String outputFormat;
-  final String language;
 
   ContentGenerationOptions({
     required this.contentType,
     required this.researchDepth,
     required this.contentLength,
     required this.outputFormat,
-    required this.language,
   });
 }
 
@@ -36,35 +34,10 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
   late int _researchDepth;
   late int _contentLength;
   late String _outputFormat;
-  late String _language;
 
-  final List<String> _contentTypes = [
-    'Detailed Content',
-    'Summary',
-    'Key Points',
-    'Study Guide',
-    'Practice Questions',
-  ];
+  final List<String> _contentTypes = ['Summary', 'Study Guide'];
 
-  final List<String> _outputFormats = [
-    'Text',
-    'Bullet Points',
-    'Q&A Format',
-    'Mind Map',
-    'Flashcards',
-  ];
-
-  final List<String> _languages = [
-    'English',
-    'Hindi',
-    'Spanish',
-    'French',
-    'German',
-    'Chinese',
-    'Japanese',
-    'Arabic',
-    'Russian',
-  ];
+  final List<String> _outputFormats = ['Bullet Points', 'Q&A Format'];
 
   @override
   void initState() {
@@ -73,7 +46,6 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
     _researchDepth = widget.initialOptions.researchDepth;
     _contentLength = widget.initialOptions.contentLength;
     _outputFormat = widget.initialOptions.outputFormat;
-    _language = widget.initialOptions.language;
   }
 
   void _updateSettings() {
@@ -83,7 +55,7 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
         researchDepth: _researchDepth,
         contentLength: _contentLength,
         outputFormat: _outputFormat,
-        language: _language,
+        // language: _language,
       ),
     );
   }
@@ -127,7 +99,7 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
                 ),
                 const SizedBox(width: 12),
                 const Text(
-                  'Content Generation Settings',
+                  'Content Generation',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -291,28 +263,7 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
                 }
               },
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Language',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.language),
-              ),
-              value: _language,
-              items: _languages
-                  .map(
-                    (lang) => DropdownMenuItem(value: lang, child: Text(lang)),
-                  )
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _language = value;
-                  });
-                  _updateSettings();
-                }
-              },
-            ),
+
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(12),

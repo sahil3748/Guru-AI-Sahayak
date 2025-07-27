@@ -5,6 +5,7 @@ class ApiEndPoint {
   static String auth = "/user/register";
   static String generateHyperLocalContent = "/agent/hyper-local-content";
   static String generateVisualAids = "/agent/visual-aids";
+  static String generateContent = "/content/generate";
 }
 
 class ApiService {
@@ -45,10 +46,7 @@ class ApiService {
     return await _dio.get(endpoint, queryParameters: params);
   }
 
-  Future<Response> post(
-    String endpoint, {
-    required Map<String, dynamic> data,
-  }) async {
+  Future<Response> post(String endpoint, {required dynamic data}) async {
     return await _dio.post(endpoint, data: data);
   }
 

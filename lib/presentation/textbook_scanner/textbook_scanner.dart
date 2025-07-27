@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../api_service/api_service.dart';
+import '../../models/content_generation_response.dart';
+import '../../services/content_generation_service.dart';
 import 'widgets/content_processing_widget.dart';
 import 'widgets/content_generation_settings.dart';
 import 'widgets/generation_preview_dialog.dart';
@@ -19,16 +23,18 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
   late ContentGenerationOptions _generationOptions;
   XFile? _selectedImage;
   FilePickerResult? _selectedFile;
+  late ContentGenerationService _contentService;
+  ContentGenerationResponse? _generationResponse;
 
   @override
   void initState() {
     super.initState();
+    _contentService = ContentGenerationService(ApiService());
     _generationOptions = ContentGenerationOptions(
-      contentType: 'Detailed Content',
+      contentType: 'Summary',
       researchDepth: 3,
       contentLength: 3,
-      outputFormat: 'Text',
-      language: 'English',
+      outputFormat: 'Bullet Points',
     );
   }
 
@@ -38,29 +44,40 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
     });
 
     try {
-      // TODO: Implement actual content processing logic here
-      await Future.delayed(const Duration(seconds: 2)); // Simulated processing
+      // Get file from either image or document source
+      File file;
+
+      if (_selectedImage != null) {
+        file = File(_selectedImage!.path);
+      } else if (_selectedFile != null) {
+        file = File(_selectedFile!.files.first.path!);
+      } else {
+        throw Exception('No file selected');
+      }
+
+      // Call the API
+      _generationResponse = await _contentService.generateContent(
+        file: file,
+        contentType: _generationOptions.contentType.toLowerCase().replaceAll(
+          ' ',
+          '_',
+        ),
+        outputFormat: _generationOptions.outputFormat.toLowerCase().replaceAll(
+          ' ',
+          '_',
+        ),
+        researchDepth: _generationOptions.researchDepth,
+        contentLength: _generationOptions.contentLength,
+      );
 
       setState(() {
-        _scannedContent =
-            '''Generation Settings:
-- Content Type: ${_generationOptions.contentType}
-- Research Depth: ${['Surface', 'Basic', 'Moderate', 'Detailed', 'Deep'][_generationOptions.researchDepth - 1]}
-- Content Length: ${['Concise', 'Brief', 'Moderate', 'Detailed', 'Comprehensive'][_generationOptions.contentLength - 1]}
-- Output Format: ${_generationOptions.outputFormat}
-
-Source: ${_selectedImage != null
-                ? 'Image - ${_selectedImage!.path}'
-                : _selectedFile != null
-                ? 'File - ${_selectedFile!.files.first.name}'
-                : 'None'}
-
-Processing will begin with these settings...''';
+        _scannedContent = _generationResponse!.content;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _scannedContent = 'Error: $e';
       });
       ScaffoldMessenger.of(
         context,
@@ -88,39 +105,6 @@ Processing will begin with these settings...''';
         },
       ),
     );
-  }
-
-  Future<void> _scanContent() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // TODO: Implement actual content processing logic here
-      await Future.delayed(const Duration(seconds: 2)); // Simulated processing
-
-      setState(() {
-        _scannedContent =
-            'Generated ${_generationOptions.contentType}\n' +
-            'For: ${_generationOptions.contentType}\n' +
-            'Complexity Level: ${_generationOptions.researchDepth}\n' +
-            'Including: ${_generationOptions.contentLength}\n\n' +
-            'Content will be processed according to these preferences\n\n' +
-            (_selectedImage != null
-                ? 'Processing image: ${_selectedImage!.path}'
-                : _selectedFile != null
-                ? 'Processing file: ${_selectedFile!.files.first.name}'
-                : '');
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error processing content: $e')));
-    }
   }
 
   Future<void> _pickImage() async {
@@ -231,12 +215,12 @@ Processing will begin with these settings...''';
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Upload a textbook page or document',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
+              // const Text(
+              //   'Upload a textbook page or document',
+              //   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              //   textAlign: TextAlign.center,
+              // ),
+              // const SizedBox(height: 24),
               ContentGenerationSettings(
                 onSettingsChanged: _handleSettingsChanged,
                 initialOptions: _generationOptions,
