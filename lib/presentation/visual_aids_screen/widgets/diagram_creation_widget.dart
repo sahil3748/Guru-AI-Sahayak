@@ -41,7 +41,7 @@ class _DiagramCreationWidgetState extends State<DiagramCreationWidget> {
 
     try {
       // Call the API service
-      final response = await _visualAidsService.generateVisualAid(
+      VisualAidsResponse response = await _visualAidsService.generateVisualAid(
         description: _descriptionController.text.trim(),
         subject: _selectedSubject,
       );

@@ -20,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text('Logout'),
             onTap: () async {
               await FirebaseAuth.instance.signOut();
+              if (!mounted) return;
               Navigator.of(context).pushReplacementNamed(ApiEndPoint.auth);
             },
           ),

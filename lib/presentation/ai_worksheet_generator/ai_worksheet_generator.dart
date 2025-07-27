@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:open_file/open_file.dart';
+// import 'package:open_file/open_file.dart';
 import 'package:sizer/sizer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +24,7 @@ import './widgets/subject_selection_card.dart';
 import './widgets/title_input_field.dart';
 import './widgets/topic_input_field.dart';
 import './widgets/worksheet_type_card.dart';
+import 'package:open_file/open_file.dart';
 
 class AiWorksheetGenerator extends StatefulWidget {
   const AiWorksheetGenerator({super.key});
@@ -247,9 +248,22 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final pdfUrl = _worksheetResponse!.getFullPdfUrl();
       print("Pdf Url : $pdfUrl");
+
+      // Show downloading message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Downloading worksheet..."),
+          backgroundColor: AppTheme.primaryBlue,
+          duration: Duration(seconds: 2),
+        ),
+      );
 
       // First download the file using dio
       final response = await Dio().get(
@@ -284,6 +298,10 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
           backgroundColor: AppTheme.alertRed,
         ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -1011,14 +1029,25 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
                 SizedBox(width: 4.w),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _downloadWorksheet,
-                    icon: CustomIconWidget(
-                      iconName: _worksheetResponse != null
-                          ? 'open_in_browser'
-                          : 'download',
-                      color: AppTheme.surfaceWhite,
-                      size: 5.w,
-                    ),
+                    onPressed: _isLoading ? null : _downloadWorksheet,
+                    icon: _isLoading
+                        ? SizedBox(
+                            width: 5.w,
+                            height: 5.w,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppTheme.surfaceWhite,
+                              ),
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : CustomIconWidget(
+                            iconName: _worksheetResponse != null
+                                ? 'open_in_browser'
+                                : 'download',
+                            color: AppTheme.surfaceWhite,
+                            size: 5.w,
+                          ),
                     label: Text(
                       _worksheetResponse != null ? "Open PDF" : "Download",
                     ),

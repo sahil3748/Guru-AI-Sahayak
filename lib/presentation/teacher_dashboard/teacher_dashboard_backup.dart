@@ -13,14 +13,14 @@ import '../../core/app_export.dart';
 import './widgets/class_card_widget.dart';
 import './widgets/empty_state_widget.dart';
 
-class TeacherDashboard extends StatefulWidget {
-  const TeacherDashboard({super.key});
+class TeacherDashboardBackUp extends StatefulWidget {
+  const TeacherDashboardBackUp({super.key});
 
   @override
-  State<TeacherDashboard> createState() => _TeacherDashboardState();
+  State<TeacherDashboardBackUp> createState() => _TeacherDashboardBackUpState();
 }
 
-class _TeacherDashboardState extends State<TeacherDashboard>
+class _TeacherDashboardBackUpState extends State<TeacherDashboardBackUp>
     with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final GoogleClassroomService _classroomService = GoogleClassroomService();
@@ -50,7 +50,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   void initState() {
     super.initState();
     fetchUserHistory();
-    _initializeClassroomData();
+    // _initializeClassroomData();
   }
 
   // Agent type counts to track usage
@@ -509,16 +509,16 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
   @override
   Widget build(BuildContext context) {
-    final user = _authService.currentUser;
-    if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    // final user = _authService.currentUser;
+    // if (user == null) {
+    //   return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // }
     return Scaffold(
       backgroundColor: AppTheme.backgroundOffWhite,
       appBar: GreetingHeaderWidget(
-        teacherName: user.displayName!,
-        profileUrl: user.photoURL ?? '',
-        onLanguageSwitch: _handleLanguageSwitch,
+        teacherName: 'GuestUser',
+        profileUrl: '',
+        onLanguageSwitch: () {},
       ),
       body: _buildBody(),
       // floatingActionButton: _buildFloatingActionButton(),
@@ -652,43 +652,43 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           children: [
             SizedBox(height: 2.h),
             QuickActionsWidget(onActionTap: _handleQuickAction),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.w),
-              child: Row(
-                children: [
-                  Text(
-                    'My Classes',
-                    style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.onSurfacePrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  // TextButton.icon(
-                  //   onPressed: () => _showAllClasses(),
-                  //   icon: CustomIconWidget(
-                  //     iconName: 'arrow_forward',
-                  //     color: AppTheme.primaryBlue,
-                  //     size: 4.w,
-                  //   ),
-                  //   label: Text(
-                  //     'View All',
-                  //     style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
-                  //       color: AppTheme.primaryBlue,
-                  //       fontWeight: FontWeight.w500,
-                  //     ),
-                  //   ),
-                  // ),
-                ],
-              ),
-            ),
+            // Padding(
+            //   padding: EdgeInsets.symmetric(horizontal: 4.w),
+            //   child: Row(
+            //     children: [
+            //       Text(
+            //         'My Classes',
+            //         style: AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
+            //           fontWeight: FontWeight.w700,
+            //           color: AppTheme.onSurfacePrimary,
+            //         ),
+            //       ),
+            //       const Spacer(),
+            //       // TextButton.icon(
+            //       //   onPressed: () => _showAllClasses(),
+            //       //   icon: CustomIconWidget(
+            //       //     iconName: 'arrow_forward',
+            //       //     color: AppTheme.primaryBlue,
+            //       //     size: 4.w,
+            //       //   ),
+            //       //   label: Text(
+            //       //     'View All',
+            //       //     style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+            //       //       color: AppTheme.primaryBlue,
+            //       //       fontWeight: FontWeight.w500,
+            //       //     ),
+            //       //   ),
+            //       // ),
+            //     ],
+            //   ),
+            // ),
 
-            SizedBox(height: 1.h),
+            // SizedBox(height: 1.h),
 
-            // Classes List, Loading, or Permission Request
-            _buildClassesSection(),
+            // // Classes List, Loading, or Permission Request
+            // _buildClassesSection(),
 
-            SizedBox(height: 10.h), // Space for FAB
+            // SizedBox(height: 10.h), // Space for FAB
           ],
         ),
       ),
@@ -1126,19 +1126,19 @@ class GreetingHeaderWidget extends StatelessWidget
           ),
 
           // Text(profileUrl),
-          GestureDetector(
-            onTap: () {
-              Navigator.pushNamed(context, AppRoutes.settings);
-            },
-            child: ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(100),
-              child: SizedBox(
-                width: 50,
-                height: 50,
-                child: CachedNetworkImage(imageUrl: profileUrl),
-              ),
-            ),
-          ),
+          // GestureDetector(
+          //   onTap: () {
+          //     Navigator.pushNamed(context, AppRoutes.settings);
+          //   },
+          //   child: ClipRRect(
+          //     borderRadius: BorderRadiusGeometry.circular(100),
+          //     child: SizedBox(
+          //       width: 50,
+          //       height: 50,
+          //       child: CachedNetworkImage(imageUrl: profileUrl),
+          //     ),
+          //   ),
+          // ),
           // CircleAvatar(
           //   radius: 40,
 

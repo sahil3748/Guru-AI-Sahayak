@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:guru_ai/main.dart';
 import 'package:guru_ai/presentation/settings/settings_screen.dart';
 import 'package:guru_ai/presentation/teacher_dashboard/teacher_dashboard.dart';
+import 'package:guru_ai/presentation/teacher_dashboard/teacher_dashboard_backup.dart';
 import '../presentation/auth/google_auth_page.dart';
 import '../presentation/assignment_creation/assignment_creation.dart';
 import '../presentation/class_detail/class_detail.dart';
@@ -15,6 +16,7 @@ class AppRoutes {
   static const String auth = '/auth';
   static const String settings = '/settings';
   static const String teacherDashboard = '/teacher-dashboard';
+  static const String teacherDashboardBackUp = '/student-dashboard-back-up';
   static const String assignmentCreation = '/assignment-creation';
   static const String classDetail = '/class-detail';
   static const String aiTutorChat = '/ai-tutor-chat';
@@ -28,6 +30,7 @@ class AppRoutes {
     settings: (context) => const SettingsScreen(),
     auth: (context) => const GoogleAuthPage(),
     teacherDashboard: (context) => const TeacherDashboard(),
+    teacherDashboardBackUp: (context) => TeacherDashboardBackUp(),
     assignmentCreation: (context) => const AssignmentCreation(),
     classDetail: (context) => const ClassDetail(),
     aiTutorChat: (context) => const AiTutorChat(),

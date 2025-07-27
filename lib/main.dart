@@ -6,6 +6,7 @@ import 'package:guru_ai/firebase_options.dart';
 import 'package:guru_ai/routes/app_routes.dart';
 import 'package:guru_ai/theme/app_theme.dart';
 import 'package:guru_ai/widgets/custom_error_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
 
 void main() async {
@@ -70,12 +71,17 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
   }
 
-  fetchUserDetails() {
+  Future<void> fetchUserDetails() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    String userId = sharedPreferences.getString('api_essential_id') ?? '';
+
     Future.delayed(Duration(seconds: 3)).then((ValueKey) {
       Navigator.pushNamedAndRemoveUntil(
         context,
         FirebaseAuth.instance.currentUser != null
             ? AppRoutes.teacherDashboard
+            : userId.isNotEmpty
+            ? AppRoutes.teacherDashboardBackUp
             : AppRoutes.auth,
         (Route<dynamic> route) => false,
       );

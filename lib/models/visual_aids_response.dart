@@ -1,5 +1,34 @@
 import 'dart:convert';
 
+class Session {
+  final String sessionId;
+  final String userId;
+  final String languagePreference;
+  final int messageCount;
+  final List<String> contextKeys;
+  final String lastActive;
+
+  Session({
+    required this.sessionId,
+    required this.userId,
+    required this.languagePreference,
+    required this.messageCount,
+    required this.contextKeys,
+    required this.lastActive,
+  });
+
+  factory Session.fromJson(Map<String, dynamic> json) {
+    return Session(
+      sessionId: json['session_id'],
+      userId: json['user_id'],
+      languagePreference: json['language_preference'],
+      messageCount: json['message_count'],
+      contextKeys: List<String>.from(json['context_keys']),
+      lastActive: json['last_active'],
+    );
+  }
+}
+
 class VisualAidsResponse {
   final String status;
   final String agentType;
@@ -9,7 +38,7 @@ class VisualAidsResponse {
   final List<VisualAid> visualAids;
   final String generationTime;
   final String? errorMessage;
-  final String? session;
+  final Session? session;
   final VisualAidMetadata metadata;
 
   VisualAidsResponse({
@@ -37,7 +66,9 @@ class VisualAidsResponse {
       ),
       generationTime: json['generation_time'],
       errorMessage: json['error_message'],
-      session: json['session'],
+      session: json['session'] != null
+          ? Session.fromJson(json['session'])
+          : null,
       metadata: VisualAidMetadata.fromJson(json['metadata']),
     );
   }
