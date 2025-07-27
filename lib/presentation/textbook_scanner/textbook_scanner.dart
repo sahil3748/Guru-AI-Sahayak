@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../api_service/api_service.dart';
 import '../../models/content_generation_response.dart';
 import '../../services/content_generation_service.dart';
@@ -55,6 +56,9 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
         throw Exception('No file selected');
       }
 
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? userId = prefs.getString('api_essential_id') ?? '';
+
       // Call the API
       _generationResponse = await _contentService.generateContent(
         file: file,
@@ -68,6 +72,7 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
         ),
         researchDepth: _generationOptions.researchDepth,
         contentLength: _generationOptions.contentLength,
+        userId: userId,
       );
 
       setState(() {
