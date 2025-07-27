@@ -36,6 +36,7 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
       researchDepth: 3,
       contentLength: 3,
       outputFormat: 'Bullet Points',
+      language: 'English',
     );
   }
 
@@ -72,6 +73,7 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
         ),
         researchDepth: _generationOptions.researchDepth,
         contentLength: _generationOptions.contentLength,
+        localLanguage: _generationOptions.language.toLowerCase(),
         userId: userId,
       );
 

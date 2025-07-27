@@ -5,12 +5,14 @@ class ContentGenerationOptions {
   final int researchDepth;
   final int contentLength;
   final String outputFormat;
+  final String language;
 
   ContentGenerationOptions({
     required this.contentType,
     required this.researchDepth,
     required this.contentLength,
     required this.outputFormat,
+    this.language = 'english',
   });
 }
 
@@ -34,10 +36,24 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
   late int _researchDepth;
   late int _contentLength;
   late String _outputFormat;
+  late String _language;
 
   final List<String> _contentTypes = ['Summary', 'Study Guide'];
 
   final List<String> _outputFormats = ['Bullet Points', 'Q&A Format'];
+
+  final List<String> _languages = [
+    'English',
+    'Hindi',
+    'Marathi',
+    'Gujarati',
+    'Bengali',
+    'Tamil',
+    'Telugu',
+    'Kannada',
+    'Malayalam',
+    'Punjabi',
+  ];
 
   @override
   void initState() {
@@ -46,6 +62,7 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
     _researchDepth = widget.initialOptions.researchDepth;
     _contentLength = widget.initialOptions.contentLength;
     _outputFormat = widget.initialOptions.outputFormat;
+    _language = widget.initialOptions.language;
   }
 
   void _updateSettings() {
@@ -55,7 +72,7 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
         researchDepth: _researchDepth,
         contentLength: _contentLength,
         outputFormat: _outputFormat,
-        // language: _language,
+        language: _language.toLowerCase(),
       ),
     );
   }
@@ -258,6 +275,30 @@ class _ContentGenerationSettingsState extends State<ContentGenerationSettings> {
                 if (value != null) {
                   setState(() {
                     _outputFormat = value;
+                  });
+                  _updateSettings();
+                }
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Language',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.language),
+              ),
+              value: _language,
+              items: _languages
+                  .map(
+                    (lang) => DropdownMenuItem(value: lang, child: Text(lang)),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _language = value;
                   });
                   _updateSettings();
                 }

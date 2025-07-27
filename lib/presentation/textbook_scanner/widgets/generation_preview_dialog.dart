@@ -18,7 +18,13 @@ class GenerationPreviewDialog extends StatelessWidget {
   }
 
   String _getContentLengthLabel(int length) {
-    return ['Concise', 'Brief', 'Moderate', 'Detailed', 'Comprehensive'][length - 1];
+    return [
+      'Concise',
+      'Brief',
+      'Moderate',
+      'Detailed',
+      'Comprehensive',
+    ][length - 1];
   }
 
   @override
@@ -30,9 +36,7 @@ class GenerationPreviewDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildSection('Content Type', [
-              options.contentType,
-            ]),
+            _buildSection('Content Type', [options.contentType]),
             const SizedBox(height: 16),
             _buildSection('Research Depth', [
               _getResearchDepthLabel(options.researchDepth),
@@ -42,17 +46,17 @@ class GenerationPreviewDialog extends StatelessWidget {
               _getContentLengthLabel(options.contentLength),
             ]),
             const SizedBox(height: 16),
-            _buildSection('Output Format', [
-              options.outputFormat,
+            _buildSection('Output Format', [options.outputFormat]),
+            const SizedBox(height: 16),
+            _buildSection('Language', [
+              options.language.substring(0, 1).toUpperCase() +
+                  options.language.substring(1),
             ]),
           ],
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: onCancel,
-          child: const Text('Adjust Settings'),
-        ),
+        TextButton(onPressed: onCancel, child: const Text('Adjust Settings')),
         ElevatedButton(
           onPressed: onConfirm,
           child: const Text('Generate Content'),
@@ -65,15 +69,14 @@ class GenerationPreviewDialog extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        ...items.map((item) => Padding(
-          padding: const EdgeInsets.only(left: 16, bottom: 4),
-          child: Text(item),
-        )),
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 4),
+            child: Text(item),
+          ),
+        ),
       ],
     );
   }
