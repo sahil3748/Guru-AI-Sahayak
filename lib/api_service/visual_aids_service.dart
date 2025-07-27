@@ -1,5 +1,6 @@
 import 'package:guru_ai/api_service/api_service.dart';
 import 'package:guru_ai/models/visual_aids_response.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class VisualAidsService {
   final ApiService _apiService;
@@ -11,12 +12,18 @@ class VisualAidsService {
     required String subject,
   }) async {
     try {
+      Map<String, dynamic> requestData = {
+        'description': description,
+        'subject': _formatSubjectForApi(subject),
+      };
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String apiEssentialId = prefs.getString('api_essential_id') ?? '';
+
+      requestData['user_id'] = apiEssentialId;
       final response = await _apiService.post(
         ApiEndPoint.generateVisualAids,
-        data: {
-          'description': description,
-          'subject': _formatSubjectForApi(subject),
-        },
+        data: requestData,
       );
 
       return VisualAidsResponse.fromJson(response.data);

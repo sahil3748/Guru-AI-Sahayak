@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:guru_ai/api_service/api_service.dart';
 import 'package:guru_ai/presentation/hyperlocal_content_generator/hyperlocal_content_generator.dart';
 import 'package:guru_ai/presentation/textbook_scanner/textbook_scanner.dart';
 import 'package:guru_ai/presentation/visual_aids_screen/visual_aids_screen.dart';
@@ -7,7 +9,6 @@ import 'package:guru_ai/services/auth_service.dart';
 import 'package:guru_ai/services/google_classroom_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sizer/sizer.dart';
-
 import '../../core/app_export.dart';
 import './widgets/class_card_widget.dart';
 import './widgets/empty_state_widget.dart';
@@ -48,7 +49,255 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   @override
   void initState() {
     super.initState();
+    fetchUserHistory();
     _initializeClassroomData();
+  }
+
+  // Agent type counts to track usage
+  Map<String, int> agentTypeCounts = {};
+
+  Future<void> fetchUserHistory() async {
+    try {
+      ApiService apiService = ApiService();
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String apiEssentialId = prefs.getString('api_essential_id') ?? '';
+
+      try {
+        final response = await apiService.get(
+          '/session/history/${apiEssentialId}',
+        );
+
+        // Parse the response and count agent types
+        if (response.statusCode == 200 && response.data != null) {
+          final List<dynamic> historyData = response.data;
+
+          // Reset counts
+          agentTypeCounts = {};
+
+          // Count each agent type
+          for (var item in historyData) {
+            String agentType = item['agent_type'] ?? 'unknown';
+            agentTypeCounts[agentType] = (agentTypeCounts[agentType] ?? 0) + 1;
+          }
+
+          // Print the counts to console
+          print('Agent Type Counts:');
+          agentTypeCounts.forEach((type, count) {
+            print('$type: $count');
+          });
+
+          // Show the counts in a dialog
+          _showAgentTypeCounts();
+        } else {
+          // If API failed, use test data
+          _useTestHistoryData();
+        }
+      } catch (error) {
+        print('API error: $error');
+        // If API call fails, use test data
+        _useTestHistoryData();
+      }
+    } catch (e) {
+      print('Error fetching user history: $e');
+    }
+  }
+
+  void _useTestHistoryData() {
+    // Test data matching the format in the user request
+    final String testData = '''
+    [
+      {
+          "timestamp": "2025-07-26T20:08:43.588703",
+          "content": "Generate stories_narratives about Water conservation for grade [3, 4, 5]",
+          "agent_type": "user",
+          "metadata": {
+              "language": "hindi",
+              "subject": "environmental_science",
+              "content_type": "stories_narratives",
+              "location": "Mumbai",
+              "topic": "Water conservation"
+          }
+      },
+      {
+          "timestamp": "2025-07-26T20:09:16.034508",
+          "content": "Generated 3 stories_narratives pieces about Water conservation",
+          "agent_type": "hyper_local_content",
+          "metadata": {
+              "language": "hindi",
+              "piece_count": 3,
+              "status": "success",
+              "content_type": "stories_narratives",
+              "quality_score": 48.33,
+              "topic": "Water conservation"
+          }
+      },
+      {
+          "timestamp": "2025-07-26T20:10:57.622751",
+          "content": "Generate stories_narratives about Water conservation for grade [3, 4, 5]",
+          "agent_type": "user",
+          "metadata": {
+              "language": "hindi",
+              "subject": "environmental_science",
+              "content_type": "stories_narratives",
+              "location": "Mumbai",
+              "topic": "Water conservation"
+          }
+      },
+      {
+          "timestamp": "2025-07-26T20:11:34.788168",
+          "content": "Generated 3 stories_narratives pieces about Water conservation",
+          "agent_type": "hyper_local_content",
+          "metadata": {
+              "language": "hindi",
+              "piece_count": 3,
+              "status": "success",
+              "content_type": "stories_narratives",
+              "quality_score": 68.33,
+              "topic": "Water conservation"
+          }
+      }
+    ]
+    ''';
+
+    try {
+      // Parse the test data
+      final List<dynamic> historyData = jsonDecode(testData);
+
+      // Reset counts
+      agentTypeCounts = {};
+
+      // Count each agent type
+      for (var item in historyData) {
+        String agentType = item['agent_type'] ?? 'unknown';
+        agentTypeCounts[agentType] = (agentTypeCounts[agentType] ?? 0) + 1;
+      }
+
+      // Print the counts to console
+      print('Agent Type Counts (Test Data):');
+      agentTypeCounts.forEach((type, count) {
+        print('$type: $count');
+      });
+
+      // Show the counts in a dialog
+      _showAgentTypeCounts();
+    } catch (e) {
+      print('Error parsing test data: $e');
+    }
+  }
+
+  void _showAgentTypeCounts() {
+    // Don't show dialog if no data
+    // if (agentTypeCounts.isEmpty) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(
+    //       content: Text('No agent usage data available'),
+    //       behavior: SnackBarBehavior.floating,
+    //     ),
+    //   );
+    //   return;
+    // }
+
+    // Calculate total count for percentages
+    int totalCount = 0;
+    agentTypeCounts.forEach((_, count) => totalCount += count);
+
+    // Prepare data for the chart
+    List<MapEntry<String, int>> sortedEntries = agentTypeCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    Future.delayed(Duration(milliseconds: 500), () {
+      // showDialog(
+      //   context: context,
+      //   builder: (context) => AlertDialog(
+      //     title: Text('Agent Type Usage Summary'),
+      //     content: Container(
+      //       width: double.maxFinite,
+      //       child: Column(
+      //         mainAxisSize: MainAxisSize.min,
+      //         crossAxisAlignment: CrossAxisAlignment.start,
+      //         children: [
+      //           Text('Distribution of agent types in your history:'),
+      //           SizedBox(height: 24),
+      //           ...sortedEntries.map((entry) {
+      //             final percentage = (entry.value / totalCount * 100)
+      //                 .toStringAsFixed(1);
+      //             return Padding(
+      //               padding: EdgeInsets.only(bottom: 16),
+      //               child: Column(
+      //                 crossAxisAlignment: CrossAxisAlignment.start,
+      //                 children: [
+      //                   Row(
+      //                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      //                     children: [
+      //                       Text(
+      //                         '${entry.key}',
+      //                         style: TextStyle(fontWeight: FontWeight.w600),
+      //                       ),
+      //                       Text(
+      //                         '${entry.value} (${percentage}%)',
+      //                         style: TextStyle(
+      //                           color: AppTheme.primaryBlue,
+      //                           fontWeight: FontWeight.w500,
+      //                         ),
+      //                       ),
+      //                     ],
+      //                   ),
+      //                   SizedBox(height: 8),
+      //                   LinearProgressIndicator(
+      //                     value: entry.value / totalCount,
+      //                     backgroundColor: Colors.grey[200],
+      //                     color: _getColorForAgentType(entry.key),
+      //                     minHeight: 8,
+      //                     borderRadius: BorderRadius.circular(4),
+      //                   ),
+      //                 ],
+      //               ),
+      //             );
+      //           }).toList(),
+      //           SizedBox(height: 16),
+      //           Text(
+      //             'Total interactions: $totalCount',
+      //             style: TextStyle(fontStyle: FontStyle.italic),
+      //           ),
+      //         ],
+      //       ),
+      //     ),
+      //     actions: [
+      //       TextButton(
+      //         onPressed: () => Navigator.of(context).pop(),
+      //         child: Text('Close'),
+      //       ),
+      //       ElevatedButton(
+      //         onPressed: () {
+      //           Navigator.of(context).pop();
+      //           fetchUserHistory(); // Refresh the data
+      //         },
+      //         child: Text('Refresh Data'),
+      //         style: ElevatedButton.styleFrom(
+      //           backgroundColor: AppTheme.primaryBlue,
+      //           foregroundColor: Colors.white,
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // );
+    });
+  }
+
+  Color _getColorForAgentType(String agentType) {
+    // Return different colors for different agent types
+    switch (agentType.toLowerCase()) {
+      case 'user':
+        return Colors.blue;
+      case 'hyper_local_content':
+        return Colors.green;
+      case 'visual_aids':
+        return Colors.orange;
+      case 'chat_assistant':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
   }
 
   /// Initialize classroom data on widget load
@@ -274,6 +523,43 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       body: _buildBody(),
       floatingActionButton: _buildFloatingActionButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
+      // Add a button in the bottom app bar to show agent stats
+      // bottomNavigationBar: BottomAppBar(
+      //   height: 60,
+      //   padding: EdgeInsets.symmetric(horizontal: 16),
+      //   child: Row(
+      //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      //     children: [
+      //       TextButton.icon(
+      //         onPressed: _showAgentTypeCounts,
+      //         icon: Icon(Icons.analytics_outlined, color: AppTheme.primaryBlue),
+      //         label: Text(
+      //           'Agent Usage Stats',
+      //           style: TextStyle(
+      //             color: AppTheme.primaryBlue,
+      //             fontWeight: FontWeight.w500,
+      //           ),
+      //         ),
+      //       ),
+      //       Row(
+      //         mainAxisSize: MainAxisSize.min,
+      //         children: [
+      //           IconButton(
+      //             icon: Icon(Icons.data_array, color: AppTheme.primaryBlue),
+      //             onPressed: _useTestHistoryData,
+      //             tooltip: 'Use Test Data',
+      //           ),
+      //           IconButton(
+      //             icon: Icon(Icons.refresh, color: AppTheme.primaryBlue),
+      //             onPressed: fetchUserHistory,
+      //             tooltip: 'Refresh History',
+      //           ),
+      //         ],
+      //       ),
+      //     ],
+      //   ),
+      // ),
     );
   }
 
@@ -378,21 +664,21 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     ),
                   ),
                   const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => _showAllClasses(),
-                    icon: CustomIconWidget(
-                      iconName: 'arrow_forward',
-                      color: AppTheme.primaryBlue,
-                      size: 4.w,
-                    ),
-                    label: Text(
-                      'View All',
-                      style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
-                        color: AppTheme.primaryBlue,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                  // TextButton.icon(
+                  //   onPressed: () => _showAllClasses(),
+                  //   icon: CustomIconWidget(
+                  //     iconName: 'arrow_forward',
+                  //     color: AppTheme.primaryBlue,
+                  //     size: 4.w,
+                  //   ),
+                  //   label: Text(
+                  //     'View All',
+                  //     style: AppTheme.lightTheme.textTheme.labelLarge?.copyWith(
+                  //       color: AppTheme.primaryBlue,
+                  //       fontWeight: FontWeight.w500,
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
