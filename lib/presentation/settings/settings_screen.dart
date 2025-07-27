@@ -16,34 +16,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: const Text('Settings')),
       body: Column(
         children: [
-          // ListTile(
-          //   title: const Text('Theme'),
-          //   subtitle: const Text('Change app theme'),
-          //   onTap: () {
-          //     // Navigate to theme settings
-          //   },
-          // ),
-          // ListTile(
-          //   title: const Text('Notifications'),
-          //   subtitle: const Text('Manage notification preferences'),
-          //   onTap: () {
-          //     // Navigate to notification settings
-          //   },
-          // ),
-          // ListTile(
-          //   title: const Text('Privacy'),
-          //   subtitle: const Text('Adjust privacy settings'),
-          //   onTap: () {
-          //     // Navigate to privacy settings
-          //   },
-          // ),
-          // ListTile(
-          //   title: const Text('About'),
-          //   subtitle: const Text('Learn more about the app'),
-          //   onTap: () {
-          //     // Navigate to about page
-          //   },
-          // ),
           ListTile(
             title: Text('Logout'),
             onTap: () async {

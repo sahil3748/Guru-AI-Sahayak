@@ -18,8 +18,8 @@ class ApiService {
     : _dio = Dio(
         BaseOptions(
           baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 30), // Increased timeout
-          receiveTimeout: const Duration(seconds: 30), // Increased timeout
+          // connectTimeout: const Duration(seconds: 30), // Increased timeout
+          // receiveTimeout: const Duration(seconds: 30), // Increased timeout
           headers: {'Content-Type': 'application/json'},
         ),
       ) {
@@ -47,6 +47,8 @@ class ApiService {
   }
 
   Future<Response> post(String endpoint, {required dynamic data}) async {
+    print("${baseUrl}$endpoint");
+    print("Request Data: $data");
     return await _dio.post(endpoint, data: data);
   }
 

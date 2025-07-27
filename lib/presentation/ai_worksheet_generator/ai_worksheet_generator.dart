@@ -1,11 +1,19 @@
 import 'dart:convert';
 // import 'dart:html' as html if (dart.library.html) 'dart:html';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'package:open_file/open_file.dart';
 import 'package:sizer/sizer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_export.dart';
+import '../../models/worksheet_response.dart';
+import '../../services/worksheet_service.dart';
 import './widgets/additional_options_section.dart';
 import './widgets/difficulty_slider.dart';
 import './widgets/generation_progress_dialog.dart';
@@ -13,6 +21,7 @@ import './widgets/grade_level_picker.dart';
 import './widgets/progress_indicator_widget.dart';
 import './widgets/question_count_selector.dart';
 import './widgets/subject_selection_card.dart';
+import './widgets/title_input_field.dart';
 import './widgets/topic_input_field.dart';
 import './widgets/worksheet_type_card.dart';
 
@@ -26,22 +35,36 @@ class AiWorksheetGenerator extends StatefulWidget {
 class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
   final PageController _pageController = PageController();
   final TextEditingController _topicController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final WorksheetService _worksheetService = WorksheetService();
 
   int _currentStep = 1;
   final int _totalSteps = 6;
+
+  bool _isLoading = false;
+  bool _isWorksheetGenerated = false;
+  WorksheetResponse? _worksheetResponse;
+  String? _errorMessage;
 
   // Form data
   String _selectedSubject = '';
   int _selectedGrade = 5;
   String _selectedTopic = '';
   String _selectedWorksheetType = '';
-  double _difficulty = 0.5;
+  double _difficulty = 0.5; // Not used in API but kept for UI
   int _questionCount = 10;
   bool _includeAnswerKey = true;
-  bool _includeHints = false;
-  bool _culturalContext = true;
+  bool _includeHints = false; // Not used in API but kept for UI
+  bool _culturalContext = true; // Not used in API but kept for UI
 
-  // Mock worksheet data
+  // Mapping for worksheet types
+  final Map<String, String> _worksheetTypeMapping = {
+    'Multiple Choice': 'multiple_choice',
+    'Short Answers': 'short_answers',
+    'Fill in the Blanks': 'fill_in_blanks',
+  };
+
+  // Mock worksheet data - kept for reference
   final List<Map<String, dynamic>> _mockWorksheetData = [
     {
       "id": 1,
@@ -51,7 +74,7 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
       "correct_answer": "42",
       "hint":
           "Add the ones place first: 5 + 7 = 12, then add the tens place: 1 + 2 + 1 = 4",
-      "explanation": "15 + 27 = (10 + 5) + (20 + 7) = 30 + 12 = 42"
+      "explanation": "15 + 27 = (10 + 5) + (20 + 7) = 30 + 12 = 42",
     },
     {
       "id": 2,
@@ -60,7 +83,7 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
       "type": "short_answer",
       "correct_answer": "₹27",
       "hint": "Subtract the cost of the book from the total money",
-      "explanation": "₹50 - ₹23 = ₹27"
+      "explanation": "₹50 - ₹23 = ₹27",
     },
     {
       "id": 3,
@@ -68,14 +91,15 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
       "type": "fill_blank",
       "correct_answer": "48",
       "hint": "Think of 8 groups of 6 or 6 groups of 8",
-      "explanation": "8 × 6 = 8 + 8 + 8 + 8 + 8 + 8 = 48"
-    }
+      "explanation": "8 × 6 = 8 + 8 + 8 + 8 + 8 + 8 = 48",
+    },
   ];
 
   @override
   void dispose() {
     _pageController.dispose();
     _topicController.dispose();
+    _titleController.dispose();
     super.dispose();
   }
 
@@ -122,16 +146,81 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
     }
   }
 
-  void _generateWorksheet() {
+  Future<void> _generateWorksheet() async {
+    // Validate topic title if not provided
+    if (_titleController.text.isEmpty) {
+      _titleController.text = '$_selectedTopic Worksheet';
+    }
+
+    // Get the worksheet type in API format
+    String worksheetType = _selectedWorksheetType.toLowerCase().replaceAll(
+      ' ',
+      '_',
+    );
+    if (_worksheetTypeMapping.containsKey(_selectedWorksheetType)) {
+      worksheetType = _worksheetTypeMapping[_selectedWorksheetType]!;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => GenerationProgressDialog(
         topic: _selectedTopic,
         questionCount: _questionCount,
-        onComplete: () {
-          Navigator.of(context).pop();
-          _showWorksheetPreview();
+        onComplete: () async {
+          // The dialog will handle its own state
+          try {
+            // Make the actual API call
+            final response = await _worksheetService.generateWorksheet(
+              subject: _selectedSubject,
+              grade: _selectedGrade.toString(),
+              topic: _selectedTopic,
+              worksheetType: worksheetType,
+              numQuestions: _questionCount,
+              title: _titleController.text,
+              includeAnswers: _includeAnswerKey,
+            );
+
+            // Process the response
+            if (response.containsKey('success') &&
+                response['success'] == false) {
+              setState(() {
+                _errorMessage =
+                    response['message'] ?? 'Failed to generate worksheet';
+                _isLoading = false;
+                _isWorksheetGenerated = false;
+              });
+              Navigator.of(context).pop(); // Close the dialog
+              _showErrorMessage(_errorMessage!);
+              return;
+            }
+
+            // Create worksheet response object
+            _worksheetResponse = WorksheetResponse.fromJson(response);
+
+            setState(() {
+              _isLoading = false;
+              _isWorksheetGenerated = true;
+            });
+
+            Navigator.of(context).pop(); // Close the dialog
+            _showWorksheetPreview();
+          } catch (e) {
+            setState(() {
+              _errorMessage = 'Error: $e';
+              _isLoading = false;
+              _isWorksheetGenerated = false;
+            });
+            Navigator.of(context).pop(); // Close the dialog
+            _showErrorMessage(
+              'An unexpected error occurred. Please try again.',
+            );
+          }
         },
       ),
     );
@@ -146,87 +235,59 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
     );
   }
 
-  Future<void> _downloadWorksheet() async {
-    try {
-      final worksheetContent = _generateWorksheetContent();
-      final fileName = "${_selectedTopic.replaceAll(' ', '_')}_worksheet.txt";
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.alertRed),
+    );
+  }
 
-      if (kIsWeb) {
-        // final bytes = utf8.encode(worksheetContent);
-        // final blob = html.Blob([bytes]);
-        // final url = html.Url.createObjectUrlFromBlob(blob);
-        // final anchor = html.AnchorElement(href: url)
-        //   ..setAttribute("download", fileName)
-        //   ..click();
-        // html.Url.revokeObjectUrl(url);
-      } else {
-        // For mobile, we'll simulate the download
+  Future<void> _downloadWorksheet() async {
+    if (_worksheetResponse == null) {
+      _showErrorMessage('No worksheet available to download');
+      return;
+    }
+
+    try {
+      final pdfUrl = _worksheetResponse!.getFullPdfUrl();
+      print("Pdf Url : $pdfUrl");
+
+      // First download the file using dio
+      final response = await Dio().get(
+        pdfUrl,
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      // Get the temporary directory path
+      final directory = await getTemporaryDirectory();
+      final filePath = '${directory.path}/worksheet.pdf';
+
+      // Write the file
+      File(filePath).writeAsBytesSync(response.data);
+
+      // Open the file
+      final result = await OpenFile.open(filePath);
+
+      if (result.type != ResultType.error) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Worksheet downloaded: $fileName"),
+          const SnackBar(
+            content: Text("Opening worksheet PDF"),
             backgroundColor: AppTheme.successGreen,
           ),
         );
+      } else {
+        throw 'Could not launch $pdfUrl';
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Download failed. Please try again."),
+        SnackBar(
+          content: Text("Error opening PDF: $e"),
           backgroundColor: AppTheme.alertRed,
         ),
       );
     }
   }
 
-  String _generateWorksheetContent() {
-    final buffer = StringBuffer();
-    buffer.writeln("AI GENERATED WORKSHEET");
-    buffer.writeln("=" * 50);
-    buffer.writeln("Subject: $_selectedSubject");
-    buffer.writeln("Grade: $_selectedGrade");
-    buffer.writeln("Topic: $_selectedTopic");
-    buffer.writeln("Type: $_selectedWorksheetType");
-    buffer.writeln("Difficulty: ${_getDifficultyLabel(_difficulty)}");
-    buffer.writeln("Questions: $_questionCount");
-    buffer.writeln("Generated on: ${DateTime.now().toString().split('.')[0]}");
-    buffer.writeln("=" * 50);
-    buffer.writeln();
-
-    for (int i = 0; i < _mockWorksheetData.length && i < _questionCount; i++) {
-      final question = _mockWorksheetData[i];
-      buffer.writeln("Question ${i + 1}: ${question['question']}");
-
-      if (question['type'] == 'multiple_choice') {
-        final options = question['options'] as List;
-        for (int j = 0; j < options.length; j++) {
-          buffer.writeln("  ${String.fromCharCode(65 + j)}. ${options[j]}");
-        }
-      }
-
-      if (_includeHints && question['hint'] != null) {
-        buffer.writeln("Hint: ${question['hint']}");
-      }
-
-      buffer.writeln();
-    }
-
-    if (_includeAnswerKey) {
-      buffer.writeln("ANSWER KEY");
-      buffer.writeln("-" * 20);
-      for (int i = 0;
-          i < _mockWorksheetData.length && i < _questionCount;
-          i++) {
-        final question = _mockWorksheetData[i];
-        buffer.writeln("${i + 1}. ${question['correct_answer']}");
-        if (question['explanation'] != null) {
-          buffer.writeln("   Explanation: ${question['explanation']}");
-        }
-      }
-    }
-
-    return buffer.toString();
-  }
-
+  // Helper method to convert difficulty slider to readable label - kept for UI display
   String _getDifficultyLabel(double value) {
     if (value <= 0.33) return "Easy";
     if (value <= 0.66) return "Medium";
@@ -505,6 +566,7 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
           SizedBox(height: 4.h),
           DifficultySlider(
             difficulty: _difficulty,
+            // difficultyLabel: _getDifficultyLabel(_difficulty),
             onDifficultyChanged: (value) {
               setState(() {
                 _difficulty = value;
@@ -547,6 +609,16 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
             ),
           ),
           SizedBox(height: 4.h),
+          // Add title input field
+          TitleInputField(
+            controller: _titleController,
+            topic: _selectedTopic,
+            subject: _selectedSubject,
+            onTitleChanged: (title) {
+              // No need to do anything here as the controller already updates
+            },
+          ),
+          SizedBox(height: 3.h),
           AdditionalOptionsSection(
             includeAnswerKey: _includeAnswerKey,
             includeHints: _includeHints,
@@ -581,9 +653,7 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
       decoration: BoxDecoration(
         color: AppTheme.lightTheme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.lightTheme.colorScheme.outline,
-        ),
+        border: Border.all(color: AppTheme.lightTheme.colorScheme.outline),
       ),
       child: Column(
         children: [
@@ -683,8 +753,9 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
             Expanded(
               child: ElevatedButton(
                 onPressed: _canProceedToNextStep() ? _nextStep : null,
-                child:
-                    Text(_currentStep == _totalSteps - 1 ? "Review" : "Next"),
+                child: Text(
+                  _currentStep == _totalSteps - 1 ? "Review" : "Next",
+                ),
               ),
             ),
           ] else ...[
@@ -728,8 +799,9 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.outline
-                      .withValues(alpha: 0.3),
+                  color: AppTheme.lightTheme.colorScheme.outline.withValues(
+                    alpha: 0.3,
+                  ),
                 ),
               ),
             ),
@@ -741,18 +813,16 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
                     children: [
                       Text(
                         "Worksheet Generated!",
-                        style:
-                            AppTheme.lightTheme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.onSurfacePrimary,
-                        ),
+                        style: AppTheme.lightTheme.textTheme.titleLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.onSurfacePrimary,
+                            ),
                       ),
                       Text(
-                        "$_selectedSubject • Grade $_selectedGrade • $_selectedTopic",
-                        style:
-                            AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.onSurfaceSecondary,
-                        ),
+                        "${_worksheetResponse?.subject ?? _selectedSubject} • Grade ${_worksheetResponse?.grade ?? _selectedGrade} • ${_worksheetResponse?.topic ?? _selectedTopic}",
+                        style: AppTheme.lightTheme.textTheme.bodyMedium
+                            ?.copyWith(color: AppTheme.onSurfaceSecondary),
                       ),
                     ],
                   ),
@@ -774,6 +844,53 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_worksheetResponse != null) ...[
+                    // PDF information box
+                    Container(
+                      margin: EdgeInsets.only(bottom: 3.h),
+                      padding: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CustomIconWidget(
+                                iconName: 'picture_as_pdf',
+                                color: AppTheme.primaryBlue,
+                                size: 8.w,
+                              ),
+                              SizedBox(width: 3.w),
+                              Expanded(
+                                child: Text(
+                                  _worksheetResponse!.title,
+                                  style: AppTheme
+                                      .lightTheme
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            "Your worksheet has been generated and is ready to view. Click the Open PDF button below to view or download your worksheet.",
+                            style: AppTheme.lightTheme.textTheme.bodyMedium,
+                          ),
+                          SizedBox(height: 1.h),
+                          Text(
+                            "Questions: ${_worksheetResponse!.questionCount}",
+                            style: AppTheme.lightTheme.textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   Text(
                     "Preview",
                     style: AppTheme.lightTheme.textTheme.titleMedium?.copyWith(
@@ -782,55 +899,85 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
                     ),
                   ),
                   SizedBox(height: 2.h),
-                  ...(_mockWorksheetData.take(_questionCount).map((question) {
-                    final index = _mockWorksheetData.indexOf(question);
-                    return Container(
-                      margin: EdgeInsets.only(bottom: 3.h),
+                  if (_worksheetResponse == null) ...[
+                    // Mock data preview
+                    ...(_mockWorksheetData.take(_questionCount).map((question) {
+                      final index = _mockWorksheetData.indexOf(question);
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 3.h),
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          color: AppTheme
+                              .lightTheme
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Question ${index + 1}",
+                              style: AppTheme.lightTheme.textTheme.labelMedium
+                                  ?.copyWith(
+                                    color: AppTheme.primaryBlue,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            SizedBox(height: 1.h),
+                            Text(
+                              question['question'] as String,
+                              style: AppTheme.lightTheme.textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w500),
+                            ),
+                            if (question['type'] == 'multiple_choice') ...[
+                              SizedBox(height: 1.h),
+                              ...(question['options'] as List).asMap().entries.map((
+                                entry,
+                              ) {
+                                return Padding(
+                                  padding: EdgeInsets.only(top: 0.5.h),
+                                  child: Text(
+                                    "${String.fromCharCode(65 + entry.key)}. ${entry.value}",
+                                    style:
+                                        AppTheme.lightTheme.textTheme.bodySmall,
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList()),
+                  ] else ...[
+                    // Real data - preview not available
+                    Container(
+                      margin: EdgeInsets.symmetric(vertical: 2.h),
                       padding: EdgeInsets.all(4.w),
                       decoration: BoxDecoration(
-                        color: AppTheme
-                            .lightTheme.colorScheme.surfaceContainerHighest,
+                        color: Colors.amber.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Text(
-                            "Question ${index + 1}",
-                            style: AppTheme.lightTheme.textTheme.labelMedium
-                                ?.copyWith(
-                              color: AppTheme.primaryBlue,
-                              fontWeight: FontWeight.w600,
+                          CustomIconWidget(
+                            iconName: 'info',
+                            color: Colors.amber[800]!,
+                            size: 6.w,
+                          ),
+                          SizedBox(width: 3.w),
+                          Expanded(
+                            child: Text(
+                              "PDF generated. Please click 'Open PDF' to view the full worksheet content.",
+                              style: AppTheme.lightTheme.textTheme.bodyMedium
+                                  ?.copyWith(color: Colors.amber[800]),
                             ),
                           ),
-                          SizedBox(height: 1.h),
-                          Text(
-                            question['question'] as String,
-                            style: AppTheme.lightTheme.textTheme.bodyMedium
-                                ?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          if (question['type'] == 'multiple_choice') ...[
-                            SizedBox(height: 1.h),
-                            ...(question['options'] as List)
-                                .asMap()
-                                .entries
-                                .map((entry) {
-                              return Padding(
-                                padding: EdgeInsets.only(top: 0.5.h),
-                                child: Text(
-                                  "${String.fromCharCode(65 + entry.key)}. ${entry.value}",
-                                  style:
-                                      AppTheme.lightTheme.textTheme.bodySmall,
-                                ),
-                              );
-                            }).toList(),
-                          ],
                         ],
                       ),
-                    );
-                  }).toList()),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -840,8 +987,9 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: AppTheme.lightTheme.colorScheme.outline
-                      .withValues(alpha: 0.3),
+                  color: AppTheme.lightTheme.colorScheme.outline.withValues(
+                    alpha: 0.3,
+                  ),
                 ),
               ),
             ),
@@ -849,33 +997,31 @@ class _AiWorksheetGeneratorState extends State<AiWorksheetGenerator> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _downloadWorksheet,
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
                     icon: CustomIconWidget(
-                      iconName: 'download',
-                      color: AppTheme.primaryBlue,
+                      iconName: 'close',
+                      color: AppTheme.onSurfaceSecondary,
                       size: 5.w,
                     ),
-                    label: const Text("Download"),
+                    label: const Text("Close"),
                   ),
                 ),
                 SizedBox(width: 4.w),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Worksheet shared successfully!"),
-                          backgroundColor: AppTheme.successGreen,
-                        ),
-                      );
-                    },
+                    onPressed: _downloadWorksheet,
                     icon: CustomIconWidget(
-                      iconName: 'share',
+                      iconName: _worksheetResponse != null
+                          ? 'open_in_browser'
+                          : 'download',
                       color: AppTheme.surfaceWhite,
                       size: 5.w,
                     ),
-                    label: const Text("Share"),
+                    label: Text(
+                      _worksheetResponse != null ? "Open PDF" : "Download",
+                    ),
                   ),
                 ),
               ],
