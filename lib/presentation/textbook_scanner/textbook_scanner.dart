@@ -28,6 +28,7 @@ class _TextbookScannerScreenState extends State<TextbookScannerScreen> {
       researchDepth: 3,
       contentLength: 3,
       outputFormat: 'Text',
+      language: 'English',
     );
   }
 
@@ -162,6 +163,64 @@ Processing will begin with these settings...''';
     }
   }
 
+  Widget _buildSourceOption({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onPressed,
+    required bool isSelected,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).primaryColor.withOpacity(0.1)
+              : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? Theme.of(context).primaryColor
+                : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 36,
+              color: isSelected
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey.shade700,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isSelected
+                    ? Theme.of(context).primaryColor
+                    : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -200,15 +259,26 @@ Processing will begin with these settings...''';
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          ElevatedButton.icon(
-                            onPressed: _pickImage,
-                            icon: const Icon(Icons.image),
-                            label: const Text('Upload Image'),
+                          Expanded(
+                            child: _buildSourceOption(
+                              context: context,
+                              icon: Icons.image,
+                              title: 'Image',
+                              subtitle: 'Upload photos of textbook pages',
+                              onPressed: _pickImage,
+                              isSelected: _selectedImage != null,
+                            ),
                           ),
-                          ElevatedButton.icon(
-                            onPressed: _pickFile,
-                            icon: const Icon(Icons.upload_file),
-                            label: const Text('Upload File'),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildSourceOption(
+                              context: context,
+                              icon: Icons.upload_file,
+                              title: 'Document',
+                              subtitle: 'Upload PDF, DOC, or DOCX files',
+                              onPressed: _pickFile,
+                              isSelected: _selectedFile != null,
+                            ),
                           ),
                         ],
                       ),

@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.guru_ai"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
